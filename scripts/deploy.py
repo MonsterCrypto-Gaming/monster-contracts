@@ -1,5 +1,5 @@
 from tracemalloc import start
-from brownie import MONToken, MonsterPortal, accounts, config, network
+from brownie import VRFv2Consumer, MONToken, MonsterCollectible, accounts, config, network
 from .utils import get_account, LOCAL_BLOCKCHAIN_ENVS, get_contract, fund_with_link, print_line
 import time
 
@@ -13,8 +13,19 @@ def deploy_monster_token():
     print_line("Deployed Monster ($MON) tokens!")
     return monster_token
 
-def deploy_monsterportal():
+def deploy_monster_collectible():
     account = get_account()
+    monster_collectible = MonsterCollectible.deploy(
+        get_contract("vrfcoordinator").address,
+        get_contract("link_token").address,
+        config["networks"][network.show_active()]["fee"],
+        config["networks"][network.show_active()]["keyhash"],
+        {"from": account},
+        publish_source=config["networks"][network.show_active()].get("verify", False),
+    )
+    print_line("Deployed Monster Collectible!")
+    return monster_collectible
+
 def deploy_vrfv2consumer():
     account = get_account()
     vrfv2consumer = VRFv2Consumer.deploy(
@@ -24,12 +35,11 @@ def deploy_vrfv2consumer():
         {"from": account},
         publish_source=config["networks"][network.show_active()].get("verify", False),
     )
-    print_line("Deployed MonsterPortal!")
-    return monster_portal
+
 
 def main():
     # deploy_monster_token()
-    deploy_monsterportal()
+    deploy_monster_collectible()
 
 
     

@@ -1,6 +1,6 @@
 {
     "python.testing.pytestArgs": [
-        "MonsterPortal"
+        "MonsterCollectible"
     ],
     "solidity.remappings": [
         "@openzeppelin/=/Users/fvs/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.6.0",

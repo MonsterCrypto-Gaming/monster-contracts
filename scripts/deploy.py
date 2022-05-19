@@ -15,7 +15,12 @@ def deploy_monster_token():
 
 def deploy_monsterportal():
     account = get_account()
-    monster_portal = MonsterPortal.deploy(
+def deploy_vrfv2consumer():
+    account = get_account()
+    vrfv2consumer = VRFv2Consumer.deploy(
+        config["networks"][network.show_active()]["subscription_id"],
+        get_contract("vrfcoordinator").address,
+        config["networks"][network.show_active()]["keyhash"],
         {"from": account},
         publish_source=config["networks"][network.show_active()].get("verify", False),
     )

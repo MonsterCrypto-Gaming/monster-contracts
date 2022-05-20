@@ -27,19 +27,25 @@ def deploy_monster_collectible():
     return monster_collectible
 
 def deploy_vrfv2consumer():
-    account = get_account()
+    account = get_account(brownie_id='MetaMask_TEST_WALLET')
+    # Assumes the subscription is funded sufficiently.
     vrfv2consumer = VRFv2Consumer.deploy(
         config["networks"][network.show_active()]["subscription_id"],
         get_contract("vrfcoordinator").address,
         config["networks"][network.show_active()]["keyhash"],
         {"from": account},
-        publish_source=config["networks"][network.show_active()].get("verify", False),
+        publish_source=config["networks"][network.show_active()].get("verify", True),
     )
+    print_line("Deployed VRFv2Consumer")
+    tx_requestrandomness = vrfv2consumer.requestRandomWords()
+    tx_requestrandomness.wait(3)
+    time.sleep(60)
+    card_randomizer_nums = vrfv2consumer.getCardRandomizerNumbers()
+    print(f"card_randomizer_nums: {card_randomizer_nums}")
+
 
 
 def main():
     # deploy_monster_token()
-    deploy_monster_collectible()
-
-
-    
+    # deploy_monster_collectible()
+    deploy_vrfv2consumer()

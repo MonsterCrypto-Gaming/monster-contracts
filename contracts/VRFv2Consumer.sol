@@ -9,17 +9,15 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface COORDINATOR;
 
     // Your subscription ID.
-    // uint64 s_subscriptionId;
+    uint64 private s_subscriptionId;
 
-    // Rinkeby coordinator. For other networks,
-    // see https://docs.chain.link/docs/vrf-contracts/#configurations
-    // address vrfCoordinator = 0x6168499c0cFfCaCD319c818142124B7A15E857ab;
+    // For networks, see https://docs.chain.link/docs/vrf-contracts/#configurations
+    // address s_vrfCoordinator;
 
     // The gas lane to use, which specifies the maximum gas price to bump to.
     // For a list of available gas lanes on each network,
     // see https://docs.chain.link/docs/vrf-contracts/#configurations
-    // bytes32 keyHash =
-    //     0xd89b2bf150e3b9e13446986e571fb9cab24b13cea0a43ea20a6049a85cc807cc;
+    bytes32 private s_keyHash;
 
     // Depends on the number of requested values that you want sent to the
     // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
@@ -27,24 +25,26 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
     // this limit based on the network that you select, the size of the request,
     // and the processing of the callback request in the fulfillRandomWords()
     // function.
-    uint32 callbackGasLimit = 100000;
+    uint32 private s_callbackGasLimit = 200000;
 
     // The default is 3, but you can set this higher.
-    uint16 requestConfirmations = 3;
+    uint16 private s_requestConfirmations = 3;
 
     // For this example, retrieve 2 random values in one request.
     // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
-    uint32 numWords = 1;
+    uint32 private s_numWords = 1;
 
     uint256[] private s_randomNumSplit;
-    uint256[] public s_randomNum;
+    uint256[] private s_randomNum;
     uint256 public s_requestId;
     uint256 public s_splitBy = 4;
-
     address s_owner;
 
-    event ReceiveRandomness(uint256[] numReceived);
-    event SplitRandomNumber(uint256[] numToSplit);
+    event ReceiveRandomNumber(uint256[] numReceived);
+    event NewlySplitNumbers(uint256[] numToSplit);
+    event SplitBy_Updated(uint256 newSplitBy);
+
+    error setSplitBy__NumberInvalid();
 
     constructor(
         uint64 _subscriptionId,
@@ -60,11 +60,11 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
     function requestRandomWords() external onlyOwner {
         // Will revert if subscription is not set and funded.
         s_requestId = COORDINATOR.requestRandomWords(
-            _keyHash,
+            s_keyHash,
             s_subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
-            numWords
+            s_requestConfirmations,
+            s_callbackGasLimit,
+            s_numWords
         );
     }
 
@@ -73,9 +73,9 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
         uint256[] memory _randomness
     ) internal override {
         s_randomNum = _randomness;
-        emit ReceiveRandomness(s_randomNum);
+        emit ReceiveRandomNumber(s_randomNum);
         s_randomNumSplit = expand(s_randomNum[0], s_splitBy);
-        emit SplitRandomNumber(s_randomNumSplit);
+        emit NewlySplitNumbers(s_randomNumSplit);
     }
 
     function expand(uint256 num, uint256 n)
@@ -98,6 +98,23 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
         returns (uint256[] memory)
     {
         return s_randomNumSplit;
+    }
+
+    function getCLRandomNumber() external view returns (uint256[] memory) {
+        return s_randomNum;
+    }
+
+    function setSplitBy(uint256 _newsplitby)
+        external
+        onlyOwner
+        returns (uint256)
+    {
+        if (_newsplitby <= 0) {
+            revert setSplitBy__NumberInvalid();
+        }
+        s_splitBy = _newsplitby;
+        emit SplitBy_Updated(s_splitBy);
+        return s_splitBy;
     }
 
     modifier onlyOwner() {

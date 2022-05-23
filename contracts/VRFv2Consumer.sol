@@ -2,8 +2,8 @@
 // An example of a consumer contract that relies on a subscription for funding.
 pragma solidity ^0.8.7;
 
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink-brownie/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 contract VRFv2Consumer is VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface COORDINATOR;
@@ -54,6 +54,7 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
         s_owner = msg.sender;
         s_subscriptionId = _subscriptionId;
+        s_keyHash = _keyHash;
     }
 
     // Assumes the subscription is funded sufficiently.
@@ -102,6 +103,10 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
 
     function getCLRandomNumber() external view returns (uint256[] memory) {
         return s_randomNum;
+    }
+
+    function getSubscriptionId() external view onlyOwner returns (uint64) {
+        return s_subscriptionId;
     }
 
     function setSplitBy(uint256 _newsplitby)

@@ -111,16 +111,59 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
     }
 
 
-    function getMonsterType(uint _num) public returns (uint number) {
-        uint number;
+    function between(uint x, uint min, uint max) private pure returns (bool) {
+        return x >= min && x <= max;
+    }   
+
+    function getMonsterLevel(uint _num) public pure returns (uint number) {
+        uint monsterNum;
         if (_num <= 59) {
-            number = 1;
+            monsterNum = 1;
         } else if (_num > 59 && _num <= 84) {
-            number =  2;
+            monsterNum =  2;
         } else {
-            number = 3;
+            monsterNum = 3;
         }
-        return number;
+        return monsterNum;
+    }
+
+    function getCommonType(uint _number) public pure returns (uint number) {
+        uint monsterNum;
+        if (between(_number, 0, 17)) {
+            monsterNum = 1;
+        } else if (between(_number, 18, 34)) {
+            monsterNum = 2;
+        } else if (between(_number, 35, 51)) {
+            monsterNum = 3;
+        } else if (between(_number, 52, 68)) {
+            monsterNum = 4;
+        } else {
+            monsterNum = 6;
+        }
+        return monsterNum;
+    }
+
+
+    function getRareType(uint _number) public pure returns (uint number) {
+        uint monsterNum;
+        if (between(_number, 0, 34)) {
+            monsterNum = 1;
+        } else if (between(_number, 35, 67)) {
+            monsterNum = 2;
+        } else {
+            monsterNum = 3;
+        }
+        return monsterNum;
+    }
+
+    function getSuperRareType(uint _number) public pure returns (uint number) {
+        uint monsterNum;
+        if (between(_number, 0, 50)) {
+            monsterNum = 1;
+        } else {
+            monsterNum = 2;
+        }
+        return monsterNum;
     }
 
     //withdrawing contract balances

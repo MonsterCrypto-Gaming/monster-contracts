@@ -126,12 +126,14 @@ def wait_for_randomness(contract):
                 "fromBlock": from_block,
                 "toBlock": to_block,
                 "address": contract.address,
+                # TODO: Make sure topic0 is working properly
                 # 'ReceiveRandomNumber(uint256[] numReceived)'
                 "topic0": "0x2b9b68a0f2880244fa2999d92504cb5dc5933b0ab58e5bede6671e51de8b74f2",
                 "apikey": config["api_keys"]["etherscan"],
             },
             headers={'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36'}).json()
         # Return randomness if received
+        print(response)
         if response['status'] == "1":
             print(f"Randomness received!\n")
             return int(response['result'][0]['topics'][0], 16)
@@ -143,3 +145,4 @@ def wait_for_randomness(contract):
         i += 1
         if i > 15:
             print("Randomness not received. Further investigation required.")
+            return

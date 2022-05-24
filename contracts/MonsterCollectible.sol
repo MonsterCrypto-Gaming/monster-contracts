@@ -1,57 +1,247 @@
-pragma solidity ^0.8.4;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract Sample721 is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
-    using Counters for Counters.Counter;
-    using Strings for uint256;
+/// @title MonsterShop ERC-1155 Contract
+/// @author 0xCrispy
+/// @notice This contract provides the ability to mint a pack of "Monster" cards - w/ Chainlink VRF and decentralized storage
 
-    Counters.Counter private _tokenIdCounter;
+contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
+    //IN DEVELOPMENT//
 
-    string public baseURI = "https://bafybeicveqyqnd6f4knwzqouge4jz2eeh7jfykzd6figarxrbnnjgrp4ne.ipfs.nftstorage.link/";
-
-    constructor() ERC721("SampleMonsters721", "SM721") {}
-
-    function safeMint() public onlyOwner {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(msg.sender, tokenId);
-        _setTokenURI(tokenId, string(abi.encodePacked(baseURI, tokenId.toString(), ".json")));
+    //GAME VARIABLES
+    uint8 private MAX_TYPE = 15;
+    struct MonsterReciept {
+        address owner;
+        mapping(address => uint) ownerToPackId;
+        mapping(address => uint) ownerToPackQuantity;
+        mapping(address => uint) ownerToMonsterType;
     }
+    MonsterReciept public monster;
+    mapping(uint => mapping(uint => uint)) mintPacksCost;
+    mapping(uint => uint) mintPackQuantity;
+    //mapping(uint => mapping(uint => uint)) monsterLevels;
 
-    // The following functions are overrides required by Solidity.
+    uint256[] public ids; //uint array of ids
+    string public baseMetadataURI; //metadata URI
+    string public name; //token mame
+    uint public testChainlink;
 
-    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
-        internal
-        override(ERC721, ERC721Enumerable)
+    //Chainlink VRF Stuff
+    bytes32 public vrfKeyHash =
+        0x2ed0feb3e7fd2022120aa84fab1945545a9f2ffc9076fd6156fa96eaff4c1311; // rinekby
+    uint256 public vrfFee = 0.25 * 10**18; //0.25 LINK
+    address public vrfCoordinator = 0xb3dCcb4Cf7a26f6cf6B120Cf5A73875B7BBc655B; // rinekby
+
+    address public deployer;
+    ERC20 LINK_token = ERC20(0x01BE23585060835E02B77ef475b0Cc51aA1e0709); // rinekby
+    mapping(bytes32 => address) public sender_request_ids;
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
+
+    // TODO list:
+    // User goes to Shop to buy a booster = mints two NFTs
+    // parsing _randomness to generate specifics on which Monster NFT to mint
+
+    uint256 public fee;
+    bytes32 public keyHash;
+    address payable public recentWinner;
+    uint256 public randomNum;
+
+    /*
+    constructor(
+        address _vrfCoordinator,
+        address _link,
+        uint256 _fee,
+        bytes32 _keyHash
+    ) VRFConsumerBase(_vrfCoordinator, _link) {
+        fee = _fee;
+        keyHash = _keyHash;
+    }
+    */
+
+    
+    constructor(string memory _name)
+        ERC1155(
+            "https://bafybeigrfsyjsgjcapbehtpfttm3z5arfs6amwo2ni4nz2pgcs65fb65di.ipfs.nftstorage.link/{id}.json"
+        ) 
+        VRFConsumerBase(vrfCoordinator, address(LINK_token))
     {
-        super._beforeTokenTransfer(from, to, tokenId);
+        deployer = address(msg.sender);
+        name = _name;
     }
 
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        super._burn(tokenId);
+    function createMapping() public {
+        mintPacksCost[1][3] = .01 ether;
+        mintPacksCost[2][6] = .02 ether;
+        mintPackQuantity[1] = 3;
+        mintPackQuantity[2] = 6;
     }
 
-    function tokenURI(uint256 tokenId)
+    function mintPack(uint8 _mintPack) public payable {
+        require(_mintPack == 1 || _mintPack == 2, "incorrect mint pack id");
+        if (_mintPack == 1) {
+            require(msg.value == mintPacksCost[_mintPack][3], "incorrect amount sent for packId");
+        } else {
+            require(msg.value == mintPacksCost[_mintPack][6], "incorrect amount sent for packId");
+        }
+        MonsterReciept storage monster_reciept = monster;
+        monster_reciept.owner = msg.sender;
+        monster_reciept.ownerToPackId[msg.sender] = _mintPack;
+        monster_reciept.ownerToPackQuantity[msg.sender] = mintPackQuantity[_mintPack];
+        sender_request_ids[requestRandomness(vrfKeyHash, vrfFee)] = address(msg.sender);
+    }
+
+    //chainlink call
+    function fulfillRandomness(bytes32 requestId, uint256 randomness)
+        internal
+        override
+    {
+        uint tokenId;
+        uint randomNumber = randomness % (10000000 % 99999999);
+        uint[4] memory x;
+        MonsterReciept storage monster_reciept = monster;
+        uint monsterLevel = getMonsterLevel(x[0]);
+        if (monsterLevel == 1) {
+            tokenId = getCommonType(x[1]);
+        } else if (monsterLevel == 2) {
+            tokenId = getRareType(x[2]);
+        } else {
+            tokenId = getSuperRareType(x[3]);
+        }
+        _mint(sender_request_ids[requestId], tokenId, 1, "");
+        //_setTokenURI(tokenId, string(abi.encodePacked(baseURI, tokenId.toString(), ".json")));
+    }
+
+
+    function between(uint x, uint min, uint max) private pure returns (bool) {
+        return x >= min && x <= max;
+    }   
+
+    function getMonsterLevel(uint _number) public pure returns (uint number) {
+        uint monsterNum;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        if (_number <= 59) {
+            monsterNum = 1;
+        } else if (_number > 59 && _number <= 84) {
+            monsterNum =  2;
+        } else {
+            monsterNum = 3;
+        }
+        return monsterNum;
+    }
+
+    function getCommonType(uint _number) public pure returns (uint number) {
+        uint monsterNum;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        if (between(_number, 1, 17)) {
+            monsterNum = 1;
+        } else if (between(_number, 18, 34)) {
+            monsterNum = 2;
+        } else if (between(_number, 35, 51)) {
+            monsterNum = 3;
+        } else if (between(_number, 52, 68)) {
+            monsterNum = 4;
+        } else if (between(_number, 69, 84)) {
+            monsterNum = 4;
+        } else {
+            monsterNum = 6;
+        }
+        return monsterNum;
+    }
+
+
+    function getRareType(uint _number) public pure returns (uint number) {
+        uint monsterNum;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        if (between(_number, 1, 50)) {
+            monsterNum = 7;
+        } else {
+            monsterNum = 8;
+        }
+        return monsterNum;
+    }
+
+    function getSuperRareType(uint _number) public pure returns (uint number) {
+        uint monsterNum;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        monsterNum = 12;
+        return monsterNum;
+    }
+
+    //withdrawing contract balances
+    function withdraw() public {
+        payable(deployer).transfer(address(this).balance);
+        LINK_token.transfer(
+            payable(deployer),
+            LINK_token.balanceOf(address(this))
+        );
+        //LINK_ERC677_token.transfer(payable(deployer), LINK_ERC677_token.balanceOf(address(this)));
+    }
+
+    /*
+    sets our URI and makes the ERC1155 OpenSea compatible
+    */
+    function uri(uint256 _tokenid)
         public
         view
-        override(ERC721, ERC721URIStorage)
+        override
         returns (string memory)
     {
-        return super.tokenURI(tokenId);
+        return
+            string(
+                abi.encodePacked(
+                    baseMetadataURI,
+                    Strings.toString(_tokenid),
+                    ".json"
+                )
+            );
     }
 
-    function supportsInterface(bytes4 interfaceId)
+    /**
+     * @dev See {IERC1155-setApprovalForAll}.
+     */
+    function setApprovalForAll(address operator, bool approved)
+        public
+        virtual
+        override
+    {
+        _setApprovalForAll(_msgSender(), operator, approved);
+    }
+
+    /**
+     * @dev See {IERC1155-isApprovedForAll}.
+     */
+    function isApprovedForAll(address account, address operator)
         public
         view
-        override(ERC721, ERC721Enumerable)
+        virtual
+        override
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return _operatorApprovals[account][operator];
+    }
+
+    /*
+    used to change metadata, only owner access
+    */
+    function setURI(string memory newuri) public onlyOwner {
+        _setURI(newuri);
+    }
+
+    //emergency stuff
+    function pause() public onlyOwner {
+        _pause();
+    }
+
+    function unpause() public onlyOwner {
+        _unpause();
     }
 }

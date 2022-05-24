@@ -129,7 +129,7 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
 
     function getMonsterLevel(uint _number) public pure returns (uint number) {
         uint monsterNum;
-        require((_number <= 100 && _number >= 0), "incorrect value sent, digit should be in 0-100 range");
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
         if (_number <= 59) {
             monsterNum = 1;
         } else if (_number > 59 && _number <= 84) {
@@ -142,14 +142,16 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
 
     function getCommonType(uint _number) public pure returns (uint number) {
         uint monsterNum;
-        require((_number <= 100 && _number >=0), "incorrect value sent, digit should be in 0-100 range");
-        if (between(_number, 0, 17)) {
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        if (between(_number, 1, 17)) {
             monsterNum = 1;
         } else if (between(_number, 18, 34)) {
             monsterNum = 2;
         } else if (between(_number, 35, 51)) {
             monsterNum = 3;
         } else if (between(_number, 52, 68)) {
+            monsterNum = 4;
+        } else if (between(_number, 69, 84)) {
             monsterNum = 4;
         } else {
             monsterNum = 6;
@@ -160,25 +162,19 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
 
     function getRareType(uint _number) public pure returns (uint number) {
         uint monsterNum;
-        require((_number <= 100 && _number >= 0), "incorrect value sent, digit should be in 0-100 range");
-        if (between(_number, 0, 34)) {
-            monsterNum = 1;
-        } else if (between(_number, 35, 67)) {
-            monsterNum = 2;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        if (between(_number, 1, 50)) {
+            monsterNum = 7;
         } else {
-            monsterNum = 3;
+            monsterNum = 8;
         }
         return monsterNum;
     }
 
     function getSuperRareType(uint _number) public pure returns (uint number) {
         uint monsterNum;
-        require((_number <= 100 && _number >= 0), "incorrect value sent, digit should be in 0-100 range");
-        if (between(_number, 0, 50)) {
-            monsterNum = 1;
-        } else {
-            monsterNum = 2;
-        }
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        monsterNum = 12;
         return monsterNum;
     }
 

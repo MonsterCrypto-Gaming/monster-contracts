@@ -1,6 +1,6 @@
 {
     "card_id_number": "114",
-    "name": "flyfury",  
+    "name": "Flyfury",  
     "description": "",
     "image": "../monsterAssets/114.png",
     "image_data":null,
@@ -9,7 +9,7 @@
         "rarity": "Common", 
         "series": "Genesis"
     },
-    "background_color":,
+    "background_color":null,
     "animation_url":null,
-    "youtube_url":null,
+    "youtube_url":null
 }

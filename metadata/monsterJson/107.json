@@ -1,6 +1,6 @@
 {
     "card_id_number": "107",
-    "name": "rabikid",  
+    "name": "Rabikid",  
     "description": "",
     "image": "../monsterAssets/107.png",
     "image_data":null,
@@ -9,7 +9,7 @@
         "rarity": "Common", 
         "series": "Genesis"
     },
-    "background_color":,
+    "background_color":null,
     "animation_url":null,
-    "youtube_url":null,
+    "youtube_url":null
 }

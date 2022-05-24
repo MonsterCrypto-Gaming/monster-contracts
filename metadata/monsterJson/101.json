@@ -1,15 +1,15 @@
 {
     "card_id_number": "101",
-    "name": "greenip",  
-    "description": "give me",
-    "image": "101.png",
+    "name": "Greenip",  
+    "description": "",
+    "image": "../monsterAssets/101.png",
     "image_data":null,
     "externalUrl":null,
     "attributes":{
         "rarity": "Common", 
         "series": "Genesis"
     },
-    "background_color":,
+    "background_color":null,
     "animation_url":null,
-    "youtube_url":null,
+    "youtube_url":null
 }

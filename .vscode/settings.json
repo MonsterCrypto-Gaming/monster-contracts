@@ -1,0 +1,11 @@
+{
+    "python.testing.pytestArgs": [
+        "MonsterCollectible"
+    ],
+    "solidity.remappings": [
+        "@openzeppelin/=/Users/fvs/.brownie/packages/OpenZeppelin/openzeppelin-contracts@4.6.0",
+        "@chainlink-brownie/=/Users/fvs/.brownie/packages/smartcontractkit/chainlink-brownie-contracts@0.4.1",
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+}

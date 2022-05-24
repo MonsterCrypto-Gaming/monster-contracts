@@ -1,0 +1,8 @@
+metadata_template = {
+    "card_id_number": "003",
+    "name": "",
+    "rarity": "Ultra Rare",
+    "series": "Genesis",
+    "description": "Evolves from #002",
+    "image": "",
+}

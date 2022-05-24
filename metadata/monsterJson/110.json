@@ -1,0 +1,15 @@
+{
+    "card_id_number": "110",
+    "name": "Borodillo",  
+    "description": "",
+    "image": "../monsterAssets/110.png",
+    "image_data":null,
+    "externalUrl":null,
+    "attributes":{
+        "rarity": "Rare", 
+        "series": "Genesis"
+    },
+    "background_color":null,
+    "animation_url":null,
+    "youtube_url":null
+}

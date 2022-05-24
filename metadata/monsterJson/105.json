@@ -1,0 +1,15 @@
+{
+    "card_id_number": "105",
+    "name": "Lapro",  
+    "description": "",
+    "image": "../monsterAssets/105.png",
+    "image_data":null,
+    "externalUrl":null,
+    "attributes":{
+        "rarity": "Rare", 
+        "series": "Genesis"
+    },
+    "background_color":null,
+    "animation_url":null,
+    "youtube_url":null
+}

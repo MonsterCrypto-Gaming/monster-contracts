@@ -1,0 +1,15 @@
+{
+    "card_id_number": "111",
+    "name": "Electrazaar",  
+    "description": "",
+    "image": "../monsterAssets/111.png",
+    "image_data":null,
+    "externalUrl":null,
+    "attributes":{
+        "rarity": "Rare", 
+        "series": "Genesis"
+    },
+    "background_color":null,
+    "animation_url":null,
+    "youtube_url":null
+}

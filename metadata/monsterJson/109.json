@@ -1,0 +1,15 @@
+{
+    "card_id_number": "109",
+    "name": "Rabuddaa",  
+    "description": "",
+    "image": "../monsterAssets/109.png",
+    "image_data":null,
+    "externalUrl":null,
+    "attributes":{
+        "rarity": "Ultra Rare", 
+        "series": "Genesis"
+    },
+    "background_color":null,
+    "animation_url":null,
+    "youtube_url":null
+}

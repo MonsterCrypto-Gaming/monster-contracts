@@ -1,0 +1,15 @@
+{
+    "card_id_number": "108",
+    "name": "ratrapa",  
+    "description": "",
+    "image": "../monsterAssets/108.png",
+    "image_data":null,
+    "externalUrl":null,
+    "attributes":{
+        "rarity": "Rare", 
+        "series": "Genesis"
+    },
+    "background_color":,
+    "animation_url":null,
+    "youtube_url":null,
+}

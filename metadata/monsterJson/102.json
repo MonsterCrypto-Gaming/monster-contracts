@@ -1,0 +1,15 @@
+{
+    "card_id_number": "102",
+    "name": "bloonip",  
+    "description": "",
+    "image": "../monsterAssets/102.png",
+    "image_data":null,
+    "externalUrl":null,
+    "attributes":{
+        "rarity": "Rare", 
+        "series": "Genesis"
+    },
+    "background_color":,
+    "animation_url":null,
+    "youtube_url":null,
+}

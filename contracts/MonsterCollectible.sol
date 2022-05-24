@@ -34,7 +34,6 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
     string public baseMetadataURI; //metadata URI
     string public name; //token mame
     uint public testChainlink;
-    
 
     //Chainlink VRF Stuff
     bytes32 public vrfKeyHash =
@@ -105,7 +104,20 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
         internal
         override
     {
-        uint tokenId = randomness % (10000000 % 99999999);
+        uint tokenId;
+        uint randomNumber = randomness % (10000000 % 99999999);
+        uint[][4] storage randomNumberSplit;
+        MonsterReciept storage monster_reciept = monster;
+        uint monsterLevel = getMonsterLevel(arr[0]);
+        if (monsterLevel == 1) {
+            tokenId = getCommonType(arr[1]);
+        } else if (monsterLevel == 2) {
+            tokenId = getRareType(arr[2]);
+        } else {
+            tokenId = getSuperRareType(arr[3]);
+        }
+        return tokenId;
+        //monster_reciept.
         _mint(sender_request_ids[requestId], tokenId, 1, "");
 
     }

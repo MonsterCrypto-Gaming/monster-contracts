@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBase.sol";
-import "@chainlink-brownie/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title MonsterShop ERC-1155 Contract
@@ -18,21 +18,22 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
     //IN DEVELOPMENT//
 
     //GAME VARIABLES
-    uint8 private lvl1 = 1; // Common
-    uint8 private lvl2 = 2; // Rare
-    uint8 private lvl3 = 3; // UltraRare
-
-    //MINT PACKS
-    uint8 public starterPack = 2;
-    // uint8 public proPack = 3;
-
-    //NFT Mint Fee
-    uint256 public starterPackFee = 0.015 ether;
-    // uint256 public proPackFee = 0.020 ether;
+    uint8 private MAX_TYPE = 15;
+    struct MonsterReciept {
+        address owner;
+        mapping(address => uint) ownerToPackId;
+        mapping(address => uint) ownerToPackQuantity;
+    }
+    MonsterReciept public monster;
+    mapping(uint => mapping(uint => uint)) mintPacksCost;
+    mapping(uint => uint) mintPackQuantity;
+    //mapping(uint => mapping(uint => uint)) monsterLevels;
 
     uint256[] public ids; //uint array of ids
     string public baseMetadataURI; //metadata URI
     string public name; //token mame
+    uint public testChainlink;
+    
 
     //Chainlink VRF Stuff
     bytes32 public vrfKeyHash =
@@ -54,6 +55,7 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
     address payable public recentWinner;
     uint256 public randomNum;
 
+    /*
     constructor(
         address _vrfCoordinator,
         address _link,
@@ -63,29 +65,38 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
         fee = _fee;
         keyHash = _keyHash;
     }
+    */
 
+    
     constructor(string memory _name)
         ERC1155(
             "https://bafybeigrfsyjsgjcapbehtpfttm3z5arfs6amwo2ni4nz2pgcs65fb65di.ipfs.nftstorage.link/{id}.json"
-        ) //test meta
+        ) 
         VRFConsumerBase(vrfCoordinator, address(LINK_token))
     {
         deployer = address(msg.sender);
         name = _name;
     }
 
+    function createMapping() public {
+        mintPacksCost[1][3] = .01 ether;
+        mintPacksCost[2][6] = .02 ether;
+        mintPackQuantity[1] = 3;
+        mintPackQuantity[2] = 6;
+    }
+
     function mintPack(uint8 _mintPack) public payable {
-        uint256 mintFee;
         require(_mintPack == 1 || _mintPack == 2, "incorrect mint pack id");
         if (_mintPack == 1) {
-            mintFee = starterPackFee;
+            require(msg.value == mintPacksCost[_mintPack][3], "incorrect amount sent for packId");
         } else {
-            mintFee = proPackFee;
+            require(msg.value == mintPacksCost[_mintPack][6], "incorrect amount sent for packId");
         }
-        require(msg.value >= mintFee, "incorrect amount sent");
-        sender_request_ids[requestRandomness(vrfKeyHash, vrfFee)] = address(
-            msg.sender
-        );
+        MonsterReciept storage monster_reciept = monster;
+        monster_reciept.owner = msg.sender;
+        monster_reciept.ownerToPackId[msg.sender] = _mintPack;
+        monster_reciept.ownerToPackQuantity[msg.sender] = mintPackQuantity[_mintPack];
+        sender_request_ids[requestRandomness(vrfKeyHash, vrfFee)] = address(msg.sender);
     }
 
     //chainlink call
@@ -93,9 +104,20 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
         internal
         override
     {
-        uint256 token_id = (randomness % MAX_SUPPLY) + 1;
-        uint256 amount = 1;
-        _mint(sender_request_ids[requestId], token_id, amount, "");
+        uint tokenId = randomness % (10000000 % 99999999);
+        _mint(sender_request_ids[requestId], tokenId, 1, "");
+
+    }
+
+
+    function getType(uint _num) {
+        if (_num <= 59) {
+
+        } else if (_num > 59 <= 84) {
+
+        } else {
+            
+        }
     }
 
     //withdrawing contract balances

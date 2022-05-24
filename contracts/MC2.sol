@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@chainlink-brownie/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "./VRFv2Consumer.sol";
 
 /// @title MonsterShop ERC-1155 Contract
 /// @author Freddie71010
@@ -28,7 +29,7 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
     // uint256 public proPackFee = 0.020 ether;
 
     uint256[] public ids; //uint array of ids
-    address s_owner;
+    // address s_owner; = this is currently declared in VRFv2Consumer
     string public baseMetadataURI; //metadata URI
 
     ERC20 LINK_token = ERC20(0x01BE23585060835E02B77ef475b0Cc51aA1e0709); // rinekby
@@ -40,31 +41,31 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
     // monster_almanac[11] = "Monster #1";
     // monster_almanac[12] = "Monster #2";
     
-    event MonsterToGenerate(unint256 _monsterUniqueId);
+    event MonsterToGenerate(uint256 _monsterUniqueId);
     
     error MonsterId__NumberInvalid();
 
 
     function mintMonsters() internal {
         (
-            monster1RarityInput,
-            monster1SpecificInput,
-            monster2RarityInput,
-            monster2SpecificInput,
+            uint256 monster1RarityInput,
+            uint256 monster1SpecificInput,
+            uint256 monster2RarityInput,
+            uint256 monster2SpecificInput,
 
         ) = VRFv2Consumer.getCardRandomizerNumbers();
 
         // use monster1RarityInput to look up mapping for rarity level
         // then use monster1SpecificInput to look up mapping for specific monster based on the rarity level
         // now you have one specific set of metadata
-        monster1 = generateMonster(monster1RarityInput, monster1SpecificInput);
-        monster2 = generateMonster(monster2RarityInput, monster2SpecificInput);
+        generateMonster(monster1RarityInput, monster1SpecificInput);
+        generateMonster(monster2RarityInput, monster2SpecificInput);
 
-        _mint();
+        //_mint();
     }
 
-    function generateMonster(uint256 _rarityNumInput, uint256 _specificMonsterInput) internal returns (uint256) {
-        uint256 monsterRarity = getmonsterId(_rarityNumInput);
+    function generateMonster(uint256 _rarityNumInput, uint256 _specificMonsterInput) internal {
+        uint256 monsterRarity = getMonsterRarity(_rarityNumInput);
         uint256 monsterId = filterMonstersByRarity(monsterRarity, _specificMonsterInput);
         if (true != between(monsterId, 101, 115)) {
             revert MonsterId__NumberInvalid();
@@ -86,7 +87,7 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
         //LINK_ERC677_token.transfer(payable(s_owner), LINK_ERC677_token.balanceOf(address(this)));
     }
 
-    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private returns (uint256 monsterId) {
+    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private returns (uint256) {
         uint256 monsterId;
         require((_rarity <= 3 && _rarity >= 1), "incorrect value sent, Rarity Level should be 1, 2 or 3");
         if (_rarity == 1) {
@@ -102,7 +103,7 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
         return x >= min && x <= max;
     }
 
-    function getMonsterRarity(uint256 _number) private pure returns (uint256 monsterRarity){
+    function getMonsterRarity(uint256 _number) private pure returns (uint256){
         uint256 monsterRarity;
         require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
         if (_number <= 59) {
@@ -115,7 +116,7 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
         return monsterRarity;
     }
 
-    function getCommonMonster(uint256 _number) private pure returns (uint256 number) {
+    function getCommonMonster(uint256 _number) private pure returns (uint256) {
         uint256 monsterId;
         require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
         if (between(_number, 1, 17)) {
@@ -134,7 +135,7 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
         return monsterId;
     }
 
-    function getRareMonster(uint256 _number) private pure returns (uint256 number) {
+    function getRareMonster(uint256 _number) private pure returns (uint256) {
         uint256 monsterId;
         require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
         if (between(_number, 1, 50)) {
@@ -145,7 +146,7 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
         return monsterId;
     }
 
-    function getUltraRareMonster(uint256 _number) private pure returns (uint256 number) {
+    function getUltraRareMonster(uint256 _number) private pure returns (uint256) {
         uint256 monsterId;
         require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
         monsterId = 112;

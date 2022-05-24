@@ -28,7 +28,7 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
     // uint256 public proPackFee = 0.020 ether;
 
     uint256[] public ids; //uint array of ids
-    address owner;
+    address s_owner;
     string public baseMetadataURI; //metadata URI
 
     ERC20 LINK_token = ERC20(0x01BE23585060835E02B77ef475b0Cc51aA1e0709); // rinekby
@@ -36,44 +36,119 @@ contract MonsterCollectible2 is ERC1155, Ownable, Pausable, VRFv2Consumer {
     // mapping() public s_rarityBreakdown;
     mapping(address => uint256) public s_accountToTokenDeposits;
 
+    mapping(uint => string)[16] public monster_almanac;
+    // monster_almanac[11] = "Monster #1";
+    // monster_almanac[12] = "Monster #2";
+    
+    event MonsterToGenerate(unint256 _monsterUniqueId);
+    
+    error MonsterId__NumberInvalid();
+
+
     function mintMonsters() internal {
         (
-            monster1Rarity,
-            monster1Specific,
-            monster2Rarity,
-            monster2Specific,
+            monster1RarityInput,
+            monster1SpecificInput,
+            monster2RarityInput,
+            monster2SpecificInput,
 
         ) = VRFv2Consumer.getCardRandomizerNumbers();
 
-        // use monster1Rarity to look up mapping for rarity level
-        // then use monster1Specific to look up mapping for specific monster based on the rarity level
+        // use monster1RarityInput to look up mapping for rarity level
+        // then use monster1SpecificInput to look up mapping for specific monster based on the rarity level
         // now you have one specific set of metadata
-        monster1 = generateMonster(monster1Rarity, monster1Specific);
-        monster2 = generateMonster(monster2Rarity, monster2Specific);
+        monster1 = generateMonster(monster1RarityInput, monster1SpecificInput);
+        monster2 = generateMonster(monster2RarityInput, monster2SpecificInput);
 
         _mint();
     }
 
-    function generateMonster(_rarityNum, _specificMonsterNum) {}
-
-    //withdrawing contract balances
-    function withdraw() public {
-        payable(owner).transfer(address(this).balance);
-        LINK_token.transfer(
-            payable(owner),
-            LINK_token.balanceOf(address(this))
-        );
-        //LINK_ERC677_token.transfer(payable(owner), LINK_ERC677_token.balanceOf(address(this)));
+    function generateMonster(uint256 _rarityNumInput, uint256 _specificMonsterInput) internal returns (uint256) {
+        uint256 monsterRarity = getmonsterId(_rarityNumInput);
+        uint256 monsterId = filterMonstersByRarity(monsterRarity, _specificMonsterInput);
+        if (true != between(monsterId, 101, 115)) {
+            revert MonsterId__NumberInvalid();
+        }
+        emit MonsterToGenerate(monsterId);
+        createMonsterNFT(monsterId);
     }
 
-    // mapping(uint => uint) public lvl1_monsters;
-    // // Rarity
-    // // unique ID number => Specific Monster ID
-    // lvl1_monsters[1] = 11;
-    // lvl1_monsters[2] = 12;
-    // lvl1_monsters[3] = 13;
+    function createMonsterNFT(uint256 _monsterId) private {
+        // use _monsterId to reference the metadata files to generate NFT
+        // EX: _monsterId = 104
+        // Inside 'metadata' folder we will have a file called '104.json' which contains all the NFT metadata for that Monster
+    }
+    
+    //withdrawing contract balances
+    function withdraw() public {
+        payable(s_owner).transfer(address(this).balance);
+        LINK_token.transfer(payable(s_owner), LINK_token.balanceOf(address(this)));
+        //LINK_ERC677_token.transfer(payable(s_owner), LINK_ERC677_token.balanceOf(address(this)));
+    }
 
-    // mapping(uint => string)[16] public monster_almanac;
-    // monster_almanac[11] = "Monster #1";
-    // monster_almanac[12] = "Monster #2";
+    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private returns (uint256 monsterId) {
+        uint256 monsterId;
+        require((_rarity <= 3 && _rarity >= 1), "incorrect value sent, Rarity Level should be 1, 2 or 3");
+        if (_rarity == 1) {
+            monsterId = getCommonMonster(_specificMonsterInput);
+        } else if (_rarity == 2) {
+            monsterId = getRareMonster(_specificMonsterInput);
+        } else {
+            monsterId = getUltraRareMonster(_specificMonsterInput);
+        }
+    }
+
+    function between(uint256 x, uint256 min, uint256 max) private pure returns (bool) {
+        return x >= min && x <= max;
+    }
+
+    function getMonsterRarity(uint256 _number) private pure returns (uint256 monsterRarity){
+        uint256 monsterRarity;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        if (_number <= 59) {
+            monsterRarity = 1;
+        } else if (_number > 59 && _number <= 84) {
+            monsterRarity = 2;
+        } else {
+            monsterRarity = 3;
+        }
+        return monsterRarity;
+    }
+
+    function getCommonMonster(uint256 _number) private pure returns (uint256 number) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
+        if (between(_number, 1, 17)) {
+            monsterId = 101;
+        } else if (between(_number, 18, 34)) {
+            monsterId = 104;
+        } else if (between(_number, 35, 51)) {
+            monsterId = 107;
+        } else if (between(_number, 52, 68)) {
+            monsterId = 113;
+        } else if (between(_number, 69, 84)) {
+            monsterId = 114;
+        } else {
+            monsterId = 115;
+        }
+        return monsterId;
+    }
+
+    function getRareMonster(uint256 _number) private pure returns (uint256 number) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
+        if (between(_number, 1, 50)) {
+            monsterId = 110;
+        } else {
+            monsterId = 111;
+        }
+        return monsterId;
+    }
+
+    function getUltraRareMonster(uint256 _number) private pure returns (uint256 number) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
+        monsterId = 112;
+        return monsterId;
+    }
 }

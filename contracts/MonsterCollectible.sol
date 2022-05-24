@@ -115,11 +115,12 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
         return x >= min && x <= max;
     }   
 
-    function getMonsterLevel(uint _num) public pure returns (uint number) {
+    function getMonsterLevel(uint _number) public pure returns (uint number) {
         uint monsterNum;
-        if (_num <= 59) {
+        require((_number <= 100 && _number >= 0), "incorrect value sent, digit should be in 0-100 range");
+        if (_number <= 59) {
             monsterNum = 1;
-        } else if (_num > 59 && _num <= 84) {
+        } else if (_number > 59 && _number <= 84) {
             monsterNum =  2;
         } else {
             monsterNum = 3;
@@ -129,6 +130,7 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
 
     function getCommonType(uint _number) public pure returns (uint number) {
         uint monsterNum;
+        require((_number <= 100 && _number >=0), "incorrect value sent, digit should be in 0-100 range");
         if (between(_number, 0, 17)) {
             monsterNum = 1;
         } else if (between(_number, 18, 34)) {
@@ -146,6 +148,7 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
 
     function getRareType(uint _number) public pure returns (uint number) {
         uint monsterNum;
+        require((_number <= 100 && _number >= 0), "incorrect value sent, digit should be in 0-100 range");
         if (between(_number, 0, 34)) {
             monsterNum = 1;
         } else if (between(_number, 35, 67)) {
@@ -158,6 +161,7 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
 
     function getSuperRareType(uint _number) public pure returns (uint number) {
         uint monsterNum;
+        require((_number <= 100 && _number >= 0), "incorrect value sent, digit should be in 0-100 range");
         if (between(_number, 0, 50)) {
             monsterNum = 1;
         } else {

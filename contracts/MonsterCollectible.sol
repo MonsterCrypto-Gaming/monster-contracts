@@ -23,6 +23,7 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
         address owner;
         mapping(address => uint) ownerToPackId;
         mapping(address => uint) ownerToPackQuantity;
+        mapping(address => uint) ownerToMonsterType;
     }
     MonsterReciept public monster;
     mapping(uint => mapping(uint => uint)) mintPacksCost;
@@ -110,14 +111,16 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
     }
 
 
-    function getType(uint _num) {
+    function getMonsterType(uint _num) public returns (uint number) {
+        uint number;
         if (_num <= 59) {
-
-        } else if (_num > 59 <= 84) {
-
+            number = 1;
+        } else if (_num > 59 && _num <= 84) {
+            number =  2;
         } else {
-            
+            number = 3;
         }
+        return number;
     }
 
     //withdrawing contract balances

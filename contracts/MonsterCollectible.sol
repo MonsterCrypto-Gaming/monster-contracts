@@ -11,12 +11,12 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBase.sol";
+import "@chainlink-brownie/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink-brownie/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
-contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, Ownable, VRFConsumerBaseV2 {
+contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, Ownable, VRFConsumerBaseV2 {
     using Counters for Counters.Counter;
     
     Counters.Counter private _tokenIdCounter;
@@ -112,10 +112,7 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         return "https://bafybeihszeu6cy5zdydso4mzomkouyfkq3bxe77b7cv7cpya7z75i2rpda.ipfs.nftstorage.link/";
     }
 
-    function between(uint x, uint min, uint max) private pure returns (bool) {
-        return x >= min && x <= max;
-    }   
-
+   
      function createMapping() public {
         mintPacksCost[1][3] = .01 ether;
         mintPacksCost[2][6] = .02 ether;
@@ -136,77 +133,76 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         monster_reciept.ownerToPackQuantity[msg.sender] = mintPackQuantity[_mintPack];
         sender_request_ids[requestRandomWords()] = address(msg.sender);
     }
+    
 
-    function getMonsterLevel(uint _number) public pure returns (uint number) {
-        uint monsterNum;
+
+    // ====================================================================================================
+    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private returns (uint256) {
+        uint256 monsterId;
+        require((_rarity <= 3 && _rarity >= 1), "incorrect value sent, Rarity Level should be 1, 2 or 3");
+        if (_rarity == 1) {
+            monsterId = getCommonMonster(_specificMonsterInput);
+        } else if (_rarity == 2) {
+            monsterId = getRareMonster(_specificMonsterInput);
+        } else {
+            monsterId = getUltraRareMonster(_specificMonsterInput);
+        }
+    }
+
+    function between(uint256 x, uint256 min, uint256 max) private pure returns (bool) {
+        return x >= min && x <= max;
+    }
+
+    function getMonsterRarity(uint256 _number) private pure returns (uint256){
+        uint256 monsterRarity;
         require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
         if (_number <= 59) {
-            monsterNum = 1;
+            monsterRarity = 1;
         } else if (_number > 59 && _number <= 84) {
-            monsterNum =  2;
+            monsterRarity = 2;
         } else {
-            monsterNum = 3;
+            monsterRarity = 3;
         }
-        return monsterNum;
+        return monsterRarity;
     }
 
-    function getCommonType(uint _number) public pure returns (uint number) {
-        uint monsterNum;
-        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+    function getCommonMonster(uint256 _number) private pure returns (uint256) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
         if (between(_number, 1, 17)) {
-            monsterNum = 1;
+            monsterId = 101;
         } else if (between(_number, 18, 34)) {
-            monsterNum = 2;
+            monsterId = 104;
         } else if (between(_number, 35, 51)) {
-            monsterNum = 3;
+            monsterId = 107;
         } else if (between(_number, 52, 68)) {
-            monsterNum = 4;
+            monsterId = 113;
         } else if (between(_number, 69, 84)) {
-            monsterNum = 4;
+            monsterId = 114;
         } else {
-            monsterNum = 6;
+            monsterId = 115;
         }
-        return monsterNum;
+        return monsterId;
     }
 
-    function getMonsterId(uint _level, uint _number) public pure returns (uint) {
-        uint id;
-        if (_level == 1) {
-            id = getCommonType(_number);
-        } else if (_level == 2) {
-            id = getRareType(_number);
-        } else {
-            id = getSuperRareType(_number);
-        }
-        return id;
-    }
-
-
-    function getRareType(uint _number) public pure returns (uint number) {
-        uint monsterNum;
-        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+    function getRareMonster(uint256 _number) private pure returns (uint256) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
         if (between(_number, 1, 50)) {
-            monsterNum = 7;
+            monsterId = 110;
         } else {
-            monsterNum = 8;
+            monsterId = 111;
         }
-        return monsterNum;
+        return monsterId;
     }
 
-    function getSuperRareType(uint _number) public pure returns (uint number) {
-        uint monsterNum;
-        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
-        monsterNum = 12;
-        return monsterNum;
+    function getUltraRareMonster(uint256 _number) private pure returns (uint256) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
+        monsterId = 112;
+        return monsterId;
     }
-
-    function safeMint(address to, string memory _uri) private {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, string(abi.encodePacked(_baseURI(), _uri)));
-        emit MonsterGenerated(_uri);
-    }
+    // ====================================================================================================
 
     // The following functions are overrides required by Solidity.
 
@@ -238,19 +234,28 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
     {
         return super.supportsInterface(interfaceId);
     }
+    // ====================================================================================================
 
     function fulfillRandomWords(
         uint256, /* requestId */
         uint256[] memory _randomness
     ) internal override {
-        uint mLevel;
+        uint mRarity;
         uint mId;
         s_randomNum = _randomness;
         emit ReceiveRandomNumber(s_randomNum);
         s_randomNumSplit = expand(s_randomNum[0], s_splitBy); //4 diff numbas
-        mLevel = getMonsterLevel(s_randomNumSplit[0]);
-        mId = getMonsterId(mLevel, s_randomNumSplit[0]);
+        
+        mRarity = getMonsterRarity(s_randomNumSplit[0]);
+        mId = filterMonstersByRarity(mRarity, s_randomNumSplit[0]);
         safeMint(msg.sender, Strings.toString(mId));
+    }
+        function safeMint(address to, string memory _monsterId) private {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, string(abi.encodePacked(_baseURI(), _monsterId)));
+        emit MonsterGenerated(_monsterId);
     }
 
     function expand(uint256 num, uint256 n)

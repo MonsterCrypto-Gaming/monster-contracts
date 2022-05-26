@@ -3,15 +3,16 @@
 pragma solidity ^0.8.7;
 
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink-brownie/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 
-contract VRFv2Consumer is VRFConsumerBaseV2 {
+contract VRFv2Consumer is Ownable, VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface COORDINATOR;
 
     // Your subscription ID.
-    uint64 private s_subscriptionId;
+    uint64 internal s_subscriptionId;
 
     // For networks, see https://docs.chain.link/docs/vrf-contracts/#configurations
     // address s_vrfCoordinator;
@@ -19,7 +20,7 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
     // The gas lane to use, which specifies the maximum gas price to bump to.
     // For a list of available gas lanes on each network,
     // see https://docs.chain.link/docs/vrf-contracts/#configurations
-    bytes32 private s_keyHash;
+    bytes32 internal s_keyHash;
 
     // Depends on the number of requested values that you want sent to the
     // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
@@ -27,26 +28,26 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
     // this limit based on the network that you select, the size of the request,
     // and the processing of the callback request in the fulfillRandomWords()
     // function.
-    uint32 private s_callbackGasLimit = 200000;
+    uint32 internal s_callbackGasLimit = 500000;
 
     // The default is 3, but you can set this higher.
-    uint16 private s_requestConfirmations = 3;
+    uint16 internal s_requestConfirmations = 3;
 
     // For this example, retrieve 2 random values in one request.
     // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
-    uint32 private s_numWords = 1;
+    uint32 internal s_numWords = 1;
 
-    uint256[] private s_randomNumSplit;
-    uint256[] private s_randomNum;
+    uint256[] internal s_monsterGeneratorNums;
+    uint256[] internal s_randomNum;
     uint256 public s_requestId;
-    uint256 public s_splitBy = 4;
+    uint256 public s_quantityOfNumsToGenerate = 4;
     address s_owner;
 
-    event ReceiveRandomNumber(uint256[] numReceived);
-    event NewlySplitNumbers(uint256[] numToSplit);
-    event SplitBy_Updated(uint256 newSplitBy);
+    event ReceivedRandonmessNum(uint256[] _receivedRand);
+    event MonsterGeneratorNums(uint256[] _monsterGenNums);
+    event QuantityOfNumsToGenerate_Updated(uint256 newSplitBy);
 
-    error setSplitBy__NumberInvalid();
+    error quantityOfNumsToGenerate__NumberInvalid();
 
     constructor(
         uint64 _subscriptionId,
@@ -74,11 +75,11 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
     function fulfillRandomWords(
         uint256, /* requestId */
         uint256[] memory _randomness
-    ) internal override {
+    ) internal virtual override {
         s_randomNum = _randomness;
-        emit ReceiveRandomNumber(s_randomNum);
-        s_randomNumSplit = expand(s_randomNum[0], s_splitBy);
-        emit NewlySplitNumbers(s_randomNumSplit);
+        emit ReceivedRandonmessNum(s_randomNum);
+        s_monsterGeneratorNums = expand(s_randomNum[0], s_quantityOfNumsToGenerate);
+        emit MonsterGeneratorNums(s_monsterGeneratorNums);
     }
 
     function expand(uint256 num, uint256 n)
@@ -95,15 +96,12 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
         return expandedValues;
     }
 
-    function getCardRandomizerNumbers()
-        external
-        view
-        returns (uint256[] memory)
+    function getMonsterGeneratorNums() external view returns (uint256[] memory)
     {
-        return s_randomNumSplit;
+        return s_monsterGeneratorNums;
     }
 
-    function getCLRandomNumber() external view returns (uint256[] memory) {
+    function getCLReceivedRandonmessNum() external view returns (uint256[] memory) {
         return s_randomNum;
     }
 
@@ -111,21 +109,14 @@ contract VRFv2Consumer is VRFConsumerBaseV2 {
         return s_subscriptionId;
     }
 
-    function setSplitBy(uint256 _newsplitby)
-        external
-        onlyOwner
-        returns (uint256)
+    function quantityOfNumsToGenerate(uint256 _newQuantity) external onlyOwner returns (uint256)
     {
-        if (_newsplitby <= 0) {
-            revert setSplitBy__NumberInvalid();
+        if (_newQuantity <= 0) {
+            revert quantityOfNumsToGenerate__NumberInvalid();
         }
-        s_splitBy = _newsplitby;
-        emit SplitBy_Updated(s_splitBy);
-        return s_splitBy;
+        s_quantityOfNumsToGenerate = _newQuantity;
+        emit QuantityOfNumsToGenerate_Updated(s_quantityOfNumsToGenerate);
+        return s_quantityOfNumsToGenerate;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == s_owner);
-        _;
-    }
 }

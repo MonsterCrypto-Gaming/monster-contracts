@@ -1,84 +1,136 @@
 // SPDX-License-Identifier: MIT
+// An example of a consumer contract that relies on a subscription for funding.
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
-/// @title MonsterShop ERC-1155 Contract
-/// @author 0xCrispy
-/// @notice This contract provides the ability to mint a pack of "Monster" cards - w/ Chainlink VRF and decentralized storage
+contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, Ownable, VRFConsumerBaseV2 {
+    using Counters for Counters.Counter;
+    
+    Counters.Counter private _tokenIdCounter;
+    VRFCoordinatorV2Interface COORDINATOR;
 
-contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
+    // Your subscription ID.
+    uint64 private s_subscriptionId;
+
+    // For networks, see https://docs.chain.link/docs/vrf-contracts/#configurations
+    // address s_vrfCoordinator;
+
+    // The gas lane to use, which specifies the maximum gas price to bump to.
+    // For a list of available gas lanes on each network,
+    // see https://docs.chain.link/docs/vrf-contracts/#configurations
+    bytes32 private s_keyHash;
+
+    // Depends on the number of requested values that you want sent to the
+    // fulfillRandomWords() function. Storing each word costs about 20,000 gas,
+    // so 100,000 is a safe default for this example contract. Test and adjust
+    // this limit based on the network that you select, the size of the request,
+    // and the processing of the callback request in the fulfillRandomWords()
+    // function.
+    uint32 private s_callbackGasLimit = 200000;
+
+    // The default is 3, but you can set this higher.
+    uint16 private s_requestConfirmations = 3;
+
+    // For this example, retrieve 2 random values in one request.
+    // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
+    uint32 private s_numWords = 1;
+
+    uint256[] private s_randomNumSplit;
+    uint256[] private s_randomNum;
+    uint256 public s_requestId;
+    uint256 public s_splitBy = 4;
+    address s_owner;
+    address public deployer;
+
     //IN DEVELOPMENT//
 
     //GAME VARIABLES
     uint8 private MAX_TYPE = 15;
     struct MonsterReciept {
-        address owner;
+    address owner;
         mapping(address => uint) ownerToPackId;
         mapping(address => uint) ownerToPackQuantity;
         mapping(address => uint) ownerToMonsterType;
+        mapping(address => uint) ownerToMonsterId;
+        mapping(address => bool) mintRights;
+        mapping(address => uint[]) randomNumbers;
     }
     MonsterReciept public monster;
+    mapping(address => bool) mintAvailability;
     mapping(uint => mapping(uint => uint)) mintPacksCost;
     mapping(uint => uint) mintPackQuantity;
-    //mapping(uint => mapping(uint => uint)) monsterLevels;
+    mapping(uint => uint) public tokenIdToMonster;
 
     uint256[] public ids; //uint array of ids
     string public baseMetadataURI; //metadata URI
-    string public name; //token mame
     uint public testChainlink;
 
-    //Chainlink VRF Stuff
-    bytes32 public vrfKeyHash =
-        0x2ed0feb3e7fd2022120aa84fab1945545a9f2ffc9076fd6156fa96eaff4c1311; // rinekby
-    uint256 public vrfFee = 0.25 * 10**18; //0.25 LINK
-    address public vrfCoordinator = 0xb3dCcb4Cf7a26f6cf6B120Cf5A73875B7BBc655B; // rinekby
-
-    address public deployer;
     ERC20 LINK_token = ERC20(0x01BE23585060835E02B77ef475b0Cc51aA1e0709); // rinekby
-    mapping(bytes32 => address) public sender_request_ids;
+    mapping(address => uint256) public sender_request_ids;
+    mapping(address => uint[]) public sender_random_numbers;
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
-    // TODO list:
-    // User goes to Shop to buy a booster = mints two NFTs
-    // parsing _randomness to generate specifics on which Monster NFT to mint
+    event ReceiveRandomNumber(uint256[] numReceived);
+    event NewlySplitNumbers(uint256[] numToSplit);
+    event SplitBy_Updated(uint256 newSplitBy);
+    event MonsterGenerated(uint monsterId);
+    event BoosterAvailable(address owner, uint id);
+    event RandomNumberArray(uint[]);
+    event openedPack(address owner, bool opened);
+    event Print(uint id);
 
-    uint256 public fee;
-    bytes32 public keyHash;
-    address payable public recentWinner;
-    uint256 public randomNum;
+    error setSplitBy__NumberInvalid();
 
-    /*
     constructor(
+        uint64 _subscriptionId,
         address _vrfCoordinator,
-        address _link,
-        uint256 _fee,
         bytes32 _keyHash
-    ) VRFConsumerBase(_vrfCoordinator, _link) {
-        fee = _fee;
-        keyHash = _keyHash;
+    ) VRFConsumerBaseV2(_vrfCoordinator) ERC721("MonsterFactory", "MF") {
+        COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
+        s_owner = msg.sender;
+        s_subscriptionId = _subscriptionId;
+        s_keyHash = _keyHash;
     }
-    */
 
+    // Assumes the subscription is funded sufficiently.
+    function requestRandomWords() private returns (uint256) {
+        // Will revert if subscription is not set and funded.
+        s_requestId = COORDINATOR.requestRandomWords(
+            s_keyHash,
+            s_subscriptionId,
+            s_requestConfirmations,
+            s_callbackGasLimit,
+            s_numWords
+        );
+        return s_requestId;
+    }
+
+    function _baseURI() internal pure override returns (string memory) {
+        return "https://bafybeihszeu6cy5zdydso4mzomkouyfkq3bxe77b7cv7cpya7z75i2rpda.ipfs.nftstorage.link/";
+    }
     
-    constructor(string memory _name)
-        ERC1155(
-            "https://bafybeigrfsyjsgjcapbehtpfttm3z5arfs6amwo2ni4nz2pgcs65fb65di.ipfs.nftstorage.link/{id}.json"
-        ) 
-        VRFConsumerBase(vrfCoordinator, address(LINK_token))
-    {
-        deployer = address(msg.sender);
-        name = _name;
+    function contractURI() public view returns (string memory) {
+        return "https://metadata-url.com/my-metadata";
     }
 
-    function createMapping() public {
+    function between(uint x, uint min, uint max) private pure returns (bool) {
+        return x >= min && x <= max;
+    }   
+
+     function createMapping() public {
         mintPacksCost[1][3] = .01 ether;
         mintPacksCost[2][6] = .02 ether;
         mintPackQuantity[1] = 3;
@@ -96,37 +148,25 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
         monster_reciept.owner = msg.sender;
         monster_reciept.ownerToPackId[msg.sender] = _mintPack;
         monster_reciept.ownerToPackQuantity[msg.sender] = mintPackQuantity[_mintPack];
-        sender_request_ids[requestRandomness(vrfKeyHash, vrfFee)] = address(msg.sender);
-    }
-
-    //chainlink call
-    function fulfillRandomness(bytes32 requestId, uint256 randomness)
-        internal
-        override
-    {
-        uint tokenId;
-        uint randomNumber = randomness % (10000000 % 99999999);
-        uint[][4] storage randomNumberSplit;
-        MonsterReciept storage monster_reciept = monster;
-        uint monsterLevel = getMonsterLevel(arr[0]);
-        if (monsterLevel == 1) {
-            tokenId = getCommonType(arr[1]);
-        } else if (monsterLevel == 2) {
-            tokenId = getRareType(arr[2]);
-        } else {
-            tokenId = getSuperRareType(arr[3]);
-        }
-        return tokenId;
-        //monster_reciept.
-        _mint(sender_request_ids[requestId], tokenId, 1, "");
-
+        monster_reciept.randomNumbers[msg.sender] = [13, 45];
+        monster_reciept.mintRights[msg.sender] = true;
+        sender_random_numbers[msg.sender] = monster_reciept.randomNumbers[msg.sender];
+        //sender_request_ids[msg.sender] = requestRandomWords();
     }
 
 
-    function between(uint x, uint min, uint max) private pure returns (bool) {
-        return x >= min && x <= max;
-    }   
-
+    
+     function openPack() public payable {
+        require(monster.mintRights[msg.sender] == true, "buy a starter pack first");
+        uint mLevel = getMonsterLevel(monster.randomNumbers[msg.sender][0]);
+        uint mId = getMonsterId(mLevel, monster.randomNumbers[msg.sender][1]);
+        emit Print(mId);
+        monster.ownerToMonsterId[msg.sender] = mId;
+        //string memory idURI = string(abi.encodePacked(_baseURI(), Strings.toString(mId), ".json"));
+        safeMint(msg.sender, mId);
+        emit openedPack(msg.sender, true);
+    }
+    
     function getMonsterLevel(uint _number) public pure returns (uint number) {
         uint monsterNum;
         require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
@@ -159,6 +199,18 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
         return monsterNum;
     }
 
+    function getMonsterId(uint _level, uint _number) public pure returns (uint) {
+        uint id;
+        if (_level == 1) {
+            id = getCommonType(_number);
+        } else if (_level == 2) {
+            id = getRareType(_number);
+        } else {
+            id = getSuperRareType(_number);
+        }
+        return id;
+    }
+
 
     function getRareType(uint _number) public pure returns (uint number) {
         uint monsterNum;
@@ -178,72 +230,101 @@ contract MonsterCollectible is ERC1155, Ownable, Pausable, VRFConsumerBase {
         return monsterNum;
     }
 
-    //withdrawing contract balances
-    function withdraw() public {
-        payable(deployer).transfer(address(this).balance);
-        LINK_token.transfer(
-            payable(deployer),
-            LINK_token.balanceOf(address(this))
-        );
-        //LINK_ERC677_token.transfer(payable(deployer), LINK_ERC677_token.balanceOf(address(this)));
+    function safeMint(address to, uint mId) private {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+        string memory str = Strings.toString(mId);
+        _setTokenURI(tokenId, string(abi.encodePacked(_baseURI(), str, ".json")));
+        tokenIdToMonster[tokenId] = monster.ownerToMonsterId[msg.sender];
+        emit MonsterGenerated(mId);
     }
 
-    /*
-    sets our URI and makes the ERC1155 OpenSea compatible
-    */
-    function uri(uint256 _tokenid)
+    function tokenURI(uint256 tokenId)
         public
         view
-        override
+        override(ERC721, ERC721URIStorage)
         returns (string memory)
     {
-        return
-            string(
-                abi.encodePacked(
-                    baseMetadataURI,
-                    Strings.toString(_tokenid),
-                    ".json"
-                )
-            );
+        string memory str = Strings.toString(tokenIdToMonster[tokenId]);
+        return string(abi.encodePacked(_baseURI(), str, ".json"));
     }
 
-    /**
-     * @dev See {IERC1155-setApprovalForAll}.
-     */
-    function setApprovalForAll(address operator, bool approved)
-        public
-        virtual
-        override
+    // The following functions are overrides required by Solidity.
+
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal
+        override(ERC721, ERC721Enumerable)
     {
-        _setApprovalForAll(_msgSender(), operator, approved);
+        super._beforeTokenTransfer(from, to, tokenId);
     }
 
-    /**
-     * @dev See {IERC1155-isApprovedForAll}.
-     */
-    function isApprovedForAll(address account, address operator)
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
         public
         view
-        virtual
-        override
+        override(ERC721, ERC721Enumerable)
         returns (bool)
     {
-        return _operatorApprovals[account][operator];
+        return super.supportsInterface(interfaceId);
     }
 
-    /*
-    used to change metadata, only owner access
-    */
-    function setURI(string memory newuri) public onlyOwner {
-        _setURI(newuri);
+    function fulfillRandomWords(
+        uint256, /* requestId */
+        uint256[] memory _randomness
+    ) internal override {
+        MonsterReciept storage monster_reciept = monster;
+        s_randomNum = _randomness;
+        emit ReceiveRandomNumber(s_randomNum);
+        s_randomNumSplit = expand(s_randomNum[0], s_splitBy); //4 diff numbas
+        emit RandomNumberArray(s_randomNumSplit);
+        monster_reciept.randomNumbers[msg.sender] = s_randomNumSplit;
+        monster_reciept.mintRights[msg.sender] = true;
+    }
+    
+    function expand(uint256 num, uint256 n)
+        internal
+        pure
+        returns (uint256[] memory expandedValues)
+    {
+        expandedValues = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            expandedValues[i] =
+                (uint256(keccak256(abi.encode(num, i))) % 100) +
+                1;
+        }
+        return expandedValues;
     }
 
-    //emergency stuff
-    function pause() public onlyOwner {
-        _pause();
+    function getCardRandomizerNumbers()
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return s_randomNumSplit;
     }
 
-    function unpause() public onlyOwner {
-        _unpause();
+    function getCLRandomNumber() external view returns (uint256[] memory) {
+        return s_randomNum;
+    }
+
+    function getSubscriptionId() external view onlyOwner returns (uint64) {
+        return s_subscriptionId;
+    }
+
+    function setSplitBy(uint256 _newsplitby)
+        external
+        onlyOwner
+        returns (uint256)
+    {
+        if (_newsplitby <= 0) {
+            revert setSplitBy__NumberInvalid();
+        }
+        s_splitBy = _newsplitby;
+        emit SplitBy_Updated(s_splitBy);
+        return s_splitBy;
     }
 }

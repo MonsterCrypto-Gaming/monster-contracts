@@ -23,14 +23,15 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
     Counters.Counter public tokenIdCounter;
     
     // VRF Helpers
-    VRFv2Consumer immutable i_vrfCoordinator;
-    mapping(uint256 => address) s_requestIdToSender;
+    // VRFv2Consumer immutable i_vrfCoordinator;
+    mapping(uint256 => address) public s_requestIdToSender;
     // string public baseMetadataURI; //metadata URI
 
     // Events
     event NftRequested(uint256 indexed requestId, address requester);
-    event NftMinted(uint256 _monsterId, address _minter);
+    event NftMinted(address owner, uint256 uniqueNftTokenId, uint256 monsterId);
     event MonsterToGenerate(uint256 _monsterUniqueId);
+    
     
     error MonsterId__NumberInvalid();
 
@@ -43,28 +44,28 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
     VRFv2Consumer(_subscriptionId, _vrfCoordinator, _keyHash)
     ERC721("MonsterFactory", "MF") {
         // s_owner = msg.sender;
-        i_vrfCoordinator = VRFv2Consumer(_vrfCoordinator);
+        // i_vrfCoordinator = VRFv2Consumer(_vrfCoordinator);
     }
 
 
     // Main function 1 - Gets Random Numbers from CL to be used for Monster selection and generation
-    function RequestBoosterPack() public {
-        i_vrfCoordinator.requestRandomWords(); 
+    function requestBoosterPack() public {
+        requestRandomWords(); 
         s_requestIdToSender[s_requestId] = msg.sender;
 
     }
     
-    // Automatically gets kicked off on internal call back to this contract from CL VRF
-    function fulfillRandomWords(
-        uint256 requestId,
-        uint256[] memory _randomness
-    ) internal override {
-        s_randomNum = _randomness;
-        emit ReceivedRandonmessNum(s_randomNum);
-        s_monsterGeneratorNums = expand(s_randomNum[0], s_quantityOfNumsToGenerate);
-        emit MonsterGeneratorNums(s_monsterGeneratorNums); // 20, 15, 33, 98
-        // mintBoosterPack(s_randomNumSplit);
-    }
+    // // Automatically gets kicked off on internal call back to this contract from CL VRF
+    // function fulfillRandomWords(
+    //     uint256 requestId,
+    //     uint256[] memory _randomness
+    // ) internal override {
+    //     s_randomNum = _randomness;
+    //     emit ReceivedRandonmessNum(s_randomNum);
+    //     s_monsterGeneratorNums = expand(s_randomNum[0], s_quantityOfNumsToGenerate);
+    //     emit MonsterGeneratorNums(s_monsterGeneratorNums); // 20, 15, 33, 98
+    //     // mintBoosterPack(s_randomNumSplit);
+    // }
 
 
 
@@ -86,10 +87,12 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
         uint256 newTokenId = tokenIdCounter.current();
         tokenIdCounter.increment();
 
-        _safeMint(monsterOwner, monster1Id);
+        _safeMint(monsterOwner, newTokenId);
         // set the tokenURI of Monster
-        _setTokenURI(newTokenId, string(abi.encodePacked(_baseURI(), monster1Id, ".json")));
-        emit NftMinted(monster1Id, monsterOwner);
+        string memory strMonster1Id = Strings.toString(monster1Id);
+        _setTokenURI(newTokenId, string(abi.encodePacked(_baseURI(), strMonster1Id, ".json")));
+        
+        emit NftMinted(monsterOwner, newTokenId, monster1Id);
     }
     
     function _splitInto4Numbers(uint256[] memory _nums) internal pure returns (uint256, uint256, uint256, uint256) {

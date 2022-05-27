@@ -56,7 +56,7 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
         bytes32 _keyHash
     )
     VRFv2Consumer(_subscriptionId, _vrfCoordinator, _keyHash)
-    ERC721("Monster Forest", "MON") {
+    ERC721("Monster Pad", "MOP") {
         setMonsterMapper();
     }
 

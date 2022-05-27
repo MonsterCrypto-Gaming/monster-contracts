@@ -147,7 +147,7 @@ def wait_for_randomness(contract):
             print("Randomness not received. Further investigation required.")
             return
 
-def listen_for_event(brownie_contract, event, timeout=200, poll_interval=2):
+def listen_for_event(brownie_contract, event, timeout=60, poll_interval=2):
     """Listen for an event to be fired from a contract.
     We are waiting for the event to return, so this function is blocking.
     Args:
@@ -155,7 +155,7 @@ def listen_for_event(brownie_contract, event, timeout=200, poll_interval=2):
         A brownie contract of some kind.
         event ([string]): The event you'd like to listen for.
         timeout (int, optional): The max amount in seconds you'd like to
-        wait for that event to fire. Defaults to 200 seconds.
+        wait for that event to fire. Defaults to 60 seconds.
         poll_interval ([int]): How often to call your node to check for events.
         Defaults to 2 seconds.
     """

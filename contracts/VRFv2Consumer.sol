@@ -3,12 +3,11 @@
 pragma solidity ^0.8.7;
 
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@chainlink-brownie/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
 
-contract VRFv2Consumer is Ownable, VRFConsumerBaseV2 {
+contract VRFv2Consumer is VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface COORDINATOR;
 
     // Your subscription ID.
@@ -61,7 +60,7 @@ contract VRFv2Consumer is Ownable, VRFConsumerBaseV2 {
     }
 
     // Assumes the subscription is funded sufficiently.
-    function requestRandomWords() internal onlyOwner {
+    function requestRandomWords() internal {
         // Will revert if subscription is not set and funded.
         s_requestId = COORDINATOR.requestRandomWords(
             s_keyHash,
@@ -105,11 +104,11 @@ contract VRFv2Consumer is Ownable, VRFConsumerBaseV2 {
         return s_randomNum;
     }
 
-    function getSubscriptionId() external view onlyOwner returns (uint64) {
+    function getSubscriptionId() external view returns (uint64) {
         return s_subscriptionId;
     }
 
-    function quantityOfNumsToGenerate(uint256 _newQuantity) external onlyOwner returns (uint256)
+    function quantityOfNumsToGenerate(uint256 _newQuantity) external returns (uint256)
     {
         if (_newQuantity <= 0) {
             revert quantityOfNumsToGenerate__NumberInvalid();

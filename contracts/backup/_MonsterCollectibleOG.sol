@@ -138,6 +138,34 @@ contract MonsterCollectibleOG is ERC721, ERC721Enumerable, ERC721URIStorage, ERC
     }
     
 
+    function openPack() public payable {
+        require(mintRights[msg.sender] == true, "buy a starter pack first");
+        uint mLevel = getMonsterRarity(monster.randomNumbers[msg.sender][0]);
+        uint mId = filterMonstersByRarity(mLevel, monster.randomNumbers[msg.sender][1]);
+        safeMint(msg.sender, mId);
+        emit openedPack(msg.sender, true);
+        mintRights[msg.sender] = false;
+    }
+
+    function safeMint(address to, uint mId) private {
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+        string memory str = Strings.toString(mId);
+        _setTokenURI(tokenId, string(abi.encodePacked(_baseURI(), str, ".json")));
+        tokenIdToMonster[tokenId] = mId;
+        emit MonsterGenerated(mId);
+    }
+
+    function gettokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        string memory str = Strings.toString(tokenIdToMonster[tokenId]);
+        return string(abi.encodePacked(_baseURI(), str, ".json"));
+    }
 
     // ====================================================================================================
     function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private pure returns (uint256) {
@@ -207,36 +235,7 @@ contract MonsterCollectibleOG is ERC721, ERC721Enumerable, ERC721URIStorage, ERC
         return monsterId;
     }
 
-    // ====================================================================================================
 
-    function openPack() public payable {
-        require(mintRights[msg.sender] == true, "buy a starter pack first");
-        uint mLevel = getMonsterRarity(monster.randomNumbers[msg.sender][0]);
-        uint mId = filterMonstersByRarity(mLevel, monster.randomNumbers[msg.sender][1]);
-        safeMint(msg.sender, mId);
-        emit openedPack(msg.sender, true);
-        mintRights[msg.sender] = false;
-    }
-
-    function safeMint(address to, uint mId) private {
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-        string memory str = Strings.toString(mId);
-        _setTokenURI(tokenId, string(abi.encodePacked(_baseURI(), str, ".json")));
-        tokenIdToMonster[tokenId] = mId;
-        emit MonsterGenerated(mId);
-    }
-
-    function gettokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        string memory str = Strings.toString(tokenIdToMonster[tokenId]);
-        return string(abi.encodePacked(_baseURI(), str, ".json"));
-    }
     // ====================================================================================================
 
 

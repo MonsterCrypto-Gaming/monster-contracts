@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./VRFv2Consumer.sol";
@@ -12,13 +14,14 @@ import "./VRFv2Consumer.sol";
 /// @author Freddie71010, 0xCrispy
 /// @notice This contract provides the ability to mint a pack of "Monster" cards - w/ Chainlink VRF and decentralized storage
 
-contract MonsterCollectible is ERC721URIStorage, Ownable, Pausable, VRFv2Consumer {
+contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, Ownable, VRFv2Consumer {
     using Counters for Counters.Counter;
 
     // NFT
     uint8 constant public STARTER_PACK = 2;
-    uint256 constant public STARTER_PACK_FEE = 0.015 ether;
-    Counters.Counter public tokenIdCounter;
+    uint256 constant public STARTER_PACK_FEE = 0.01 ether;
+    Counters.Counter private tokenIdCounter;
+    mapping(uint256 => string) public monsterIdToMonsterName;
     
     //GAME VARIABLES
     // struct MonsterReceipt {
@@ -41,13 +44,10 @@ contract MonsterCollectible is ERC721URIStorage, Ownable, Pausable, VRFv2Consume
 
     // Events
     event NftRequested(uint256 indexed requestId, address requester);
-    event NftMinted(address owner, uint256 uniqueNftTokenId, uint256 monsterId);
-    event MonsterToGenerate(uint256 _monsterUniqueId);
+    event NftMinted(address owner, uint256 uniqueNftTokenId, uint256 monsterId, string monsterName);
     
     // Errors
     error MonsterId__NumberInvalid();
-    error BoosterPack__AvailableUnmintedPackInWallet();
-    error BoosterPack__NoUnmintedPackInWallet();
 
     // =====================================================================================
     constructor (
@@ -56,23 +56,23 @@ contract MonsterCollectible is ERC721URIStorage, Ownable, Pausable, VRFv2Consume
         bytes32 _keyHash
     )
     VRFv2Consumer(_subscriptionId, _vrfCoordinator, _keyHash)
-    ERC721("Monstermons", "MON") {}
+    ERC721("Monster Forest", "MON") {
+        setMonsterMapper();
+    }
 
     // Main function 1 - Gets Random Numbers from CL to be used for Monster selection and generation
-    function requestBoosterPack() external {
-        if (s_addressToUnmintedPacks[msg.sender] == 1) {
-            revert BoosterPack__AvailableUnmintedPackInWallet();
-        }
+    function buyBoosterPack() public payable {
+        require(s_addressToUnmintedPacks[msg.sender] == 0, "User has unminted packs available to open. Open packs before purchasing another.");
+        require(msg.value == STARTER_PACK_FEE, "Incorrect amount sent. Please send 0.01 ETH.");
+
         requestRandomWords(); 
         s_requestIdToSender[s_requestId] = msg.sender;
         s_addressToUnmintedPacks[msg.sender] = 1;
     }
     
     // Main function 2 - Selects monsters to be generated and mints monsters
-    function mintBoosterPack() external {
-        if (s_addressToUnmintedPacks[msg.sender] == 0) {
-            revert BoosterPack__NoUnmintedPackInWallet();
-        }
+    function openBoosterPack() public {
+        require(s_addressToUnmintedPacks[msg.sender] == 1, "User has no booster packs available to open. Purchase a booster pack before proceeding.");
         (
             uint256 monster1RarityInput,
             uint256 monster1SpecificInput,
@@ -96,12 +96,12 @@ contract MonsterCollectible is ERC721URIStorage, Ownable, Pausable, VRFv2Consume
         tokenIdCounter.increment();
         _safeMint(_monsterOwner, newTokenId);
         string memory strMonsterId = Strings.toString(_monster);
-        _setTokenURI(newTokenId, string(abi.encodePacked(_baseURI(), strMonsterId, ".json")));
+        _setTokenURI(newTokenId, string(abi.encodePacked(strMonsterId, ".json")));
         s_tokenIdToMonster[newTokenId] = _monster;
-        emit NftMinted(_monsterOwner, newTokenId, _monster);
+        emit NftMinted(_monsterOwner, newTokenId, _monster, monsterIdToMonsterName[_monster]);
     }
     
-    function _splitInto4Numbers(uint256[] memory _nums) internal pure returns (uint256, uint256, uint256, uint256) {
+    function _splitInto4Numbers(uint256[] memory _nums) private pure returns (uint256, uint256, uint256, uint256) {
         return (
             _nums[0],
             _nums[1],
@@ -114,24 +114,39 @@ contract MonsterCollectible is ERC721URIStorage, Ownable, Pausable, VRFv2Consume
         return "https://bafybeifglhkoktbn7r7rvigkgaabh4wvu2rilavd74snwu7rzmza4yukce.ipfs.nftstorage.link/";
     }
 
-    function generateMonster(uint256 _rarityNumInput, uint256 _specificMonsterInput) internal returns (uint256) {
+    function generateMonster(uint256 _rarityNumInput, uint256 _specificMonsterInput) private pure returns (uint256) {
         uint256 monsterRarity = getMonsterRarity(_rarityNumInput);
         uint256 monsterId = filterMonstersByRarity(monsterRarity, _specificMonsterInput);
         if (true != between(monsterId, 101, 115)) {
             revert MonsterId__NumberInvalid();
         }
-        emit MonsterToGenerate(monsterId);
         return monsterId;
     }
 
-    // //withdrawing contract balances
-    // function withdraw() public {
-    //     payable(s_owner).transfer(address(this).balance);
-    //     LINK_token.transfer(payable(s_owner), LINK_token.balanceOf(address(this)));
-    //     //LINK_ERC677_token.transfer(payable(s_owner), LINK_ERC677_token.balanceOf(address(this)));
-    // }
+    // withdrawing contract balances
+    function withdraw(address _to) public onlyOwner {
+        require(address(this).balance > 0, "Balance of contract is 0");
+        _to.transfer(address(this).balance);
+    }
 
     
+    function setMonsterMapper() private {
+        monsterIdToMonsterName[101]="Greenip";
+        monsterIdToMonsterName[102]="Bloonip";
+        monsterIdToMonsterName[103]="Trapnip";
+        monsterIdToMonsterName[104]="Lavanoob";
+        monsterIdToMonsterName[105]="Lapro";
+        monsterIdToMonsterName[106]="Champlava";
+        monsterIdToMonsterName[107]="Rabikid";
+        monsterIdToMonsterName[108]="Ratrapa";
+        monsterIdToMonsterName[109]="Rabuddaa";
+        monsterIdToMonsterName[110]="Borodillo";
+        monsterIdToMonsterName[111]="Electrazaar";
+        monsterIdToMonsterName[112]="Mythikos";
+        monsterIdToMonsterName[113]="Slitex";
+        monsterIdToMonsterName[114]="Flyfury";
+        monsterIdToMonsterName[115]="Terapartor";
+    }
     // Helper functions for Monster generation calculation
     // ================================================================================================
     
@@ -202,9 +217,36 @@ contract MonsterCollectible is ERC721URIStorage, Ownable, Pausable, VRFv2Consume
         return monsterId;
     }
 
-    function getTokenURI(uint256 tokenId) public view returns (string memory) {
-        string memory str = Strings.toString(s_tokenIdToMonster[tokenId]);
-        return string(abi.encodePacked(_baseURI(), str, ".json"));
+    // ================================================================================================
+    // The following functions are overrides required by Solidity.
+
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId)
+        internal
+        override(ERC721, ERC721Enumerable)
+    {
+        super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
+        super._burn(tokenId);
+    }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        return super.tokenURI(tokenId);
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721, ERC721Enumerable)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
     }
 
 }

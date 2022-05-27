@@ -1,15 +1,9 @@
 {
     "card_id_number": "114",
-    "name": "Flyfury",  
-    "description": "",
+    "name": "Flyfury",
     "image": "https://bafybeiabyttq27anktekh232tohjrlkbceagwvfnw5vnbipwfrqun2rx3m.ipfs.nftstorage.link/114.png",
-    "image_data":null,
-    "externalUrl":null,
     "attributes":{
         "rarity": "Common", 
         "series": "Genesis"
-    },
-    "background_color":null,
-    "animation_url":null,
-    "youtube_url":null
+    }
 }

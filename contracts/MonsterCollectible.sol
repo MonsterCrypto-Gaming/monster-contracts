@@ -11,12 +11,12 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBase.sol";
+import "@chainlink-brownie/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import "@chainlink-brownie/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
-contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, Ownable, VRFConsumerBaseV2 {
+contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, Ownable, VRFConsumerBaseV2 {
     using Counters for Counters.Counter;
     
     Counters.Counter private _tokenIdCounter;
@@ -121,10 +121,7 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         return "https://metadata-url.com/my-metadata";
     }
 
-    function between(uint x, uint min, uint max) private pure returns (bool) {
-        return x >= min && x <= max;
-    }   
-
+   
      function createMapping() public {
         mintPacksCost[1][3] = .01 ether;
         mintPacksCost[2][6] = .02 ether;
@@ -144,6 +141,25 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         monster_reciept.ownerToPackId[msg.sender] = _mintPack;
         monster_reciept.ownerToPackQuantity[msg.sender] = mintPackQuantity[_mintPack];
         sender_request_ids[requestRandomWords()] = msg.sender;
+    }
+    
+
+
+    // ====================================================================================================
+    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private returns (uint256) {
+        uint256 monsterId;
+        require((_rarity <= 3 && _rarity >= 1), "incorrect value sent, Rarity Level should be 1, 2 or 3");
+        if (_rarity == 1) {
+            monsterId = getCommonMonster(_specificMonsterInput);
+        } else if (_rarity == 2) {
+            monsterId = getRareMonster(_specificMonsterInput);
+        } else {
+            monsterId = getUltraRareMonster(_specificMonsterInput);
+        }
+    }
+
+    function between(uint256 x, uint256 min, uint256 max) private pure returns (bool) {
+        return x >= min && x <= max;
     }
 
     function getMonsterRarity(uint256 _number) private pure returns (uint256){
@@ -238,6 +254,7 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         string memory str = Strings.toString(tokenIdToMonster[tokenId]);
         return string(abi.encodePacked(_baseURI(), str, ".json"));
     }
+    // ====================================================================================================
 
 
     // The following functions are overrides required by Solidity.
@@ -261,6 +278,7 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
     {
         return super.supportsInterface(interfaceId);
     }
+    // ====================================================================================================
 
     function fulfillRandomWords(
         uint256 requestId, /* requestId */

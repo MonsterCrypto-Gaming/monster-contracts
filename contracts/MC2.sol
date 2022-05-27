@@ -47,7 +47,6 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
     function requestBoosterPack() public {
         requestRandomWords(); 
         s_requestIdToSender[s_requestId] = msg.sender;
-
     }
     
     // Main function 2 - Selects monsters to be generated and mints monsters
@@ -55,24 +54,27 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
         (
             uint256 monster1RarityInput,
             uint256 monster1SpecificInput,
-            , // uint256 monster2RarityInput,
-             // uint256 monster2SpecificInput
+            uint256 monster2RarityInput,
+            uint256 monster2SpecificInput
         ) = _splitInto4Numbers(s_monsterGeneratorNums);
 
-        uint256 monster1Id = generateMonster(monster1RarityInput, monster1SpecificInput); // returns Monster ID
-        // generateMonster(monster2RarityInput, monster2SpecificInput);
+        uint256 monster1Id = generateMonster(monster1RarityInput, monster1SpecificInput);
+        uint256 monster2Id = generateMonster(monster2RarityInput, monster2SpecificInput);
         
-        // now it's time to mint monster
         address monsterOwner = s_requestIdToSender[s_requestId];
+        // now it's time to mint the monsters
+        mintMonster(monster1Id, monsterOwner);
+        mintMonster(monster2Id, monsterOwner);
+    }
+    
+    function mintMonster(uint256 _monster, address _monsterOwner) private {
         uint256 newTokenId = tokenIdCounter.current();
         tokenIdCounter.increment();
-
-        _safeMint(monsterOwner, newTokenId);
-        // set the tokenURI of Monster
-        string memory strMonster1Id = Strings.toString(monster1Id);
-        _setTokenURI(newTokenId, string(abi.encodePacked(_baseURI(), strMonster1Id, ".json")));
+        _safeMint(_monsterOwner, newTokenId);
+        string memory strMonsterId = Strings.toString(_monster);
+        _setTokenURI(newTokenId, string(abi.encodePacked(_baseURI(), strMonsterId, ".json")));
         
-        emit NftMinted(monsterOwner, newTokenId, monster1Id);
+        emit NftMinted(_monsterOwner, newTokenId, _monster);
     }
     
     function _splitInto4Numbers(uint256[] memory _nums) internal pure returns (uint256, uint256, uint256, uint256) {
@@ -87,8 +89,6 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
     function _baseURI() internal pure override returns (string memory) {
         return "https://bafybeifglhkoktbn7r7rvigkgaabh4wvu2rilavd74snwu7rzmza4yukce.ipfs.nftstorage.link/";
     }
-
-    
 
     function generateMonster(uint256 _rarityNumInput, uint256 _specificMonsterInput) internal returns (uint256) {
         uint256 monsterRarity = getMonsterRarity(_rarityNumInput);
@@ -107,6 +107,8 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
     //     //LINK_ERC677_token.transfer(payable(s_owner), LINK_ERC677_token.balanceOf(address(this)));
     // }
 
+    
+    // Helper functions for Monster generation calculation
     // ================================================================================================
     
     function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private pure returns (uint256) {
@@ -175,4 +177,15 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
         monsterId = 112;
         return monsterId;
     }
+
+    function getTokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        string memory str = Strings.toString(tokenIdToMonster[tokenId]);
+        return string(abi.encodePacked(_baseURI(), str, ".json"));
+    }
+
 }

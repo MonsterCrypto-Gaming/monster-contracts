@@ -16,7 +16,7 @@ import "@chainlink-brownie/contracts/src/v0.8/interfaces/AggregatorV3Interface.s
 import "@chainlink-brownie/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import "@chainlink-brownie/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
-contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, Ownable, VRFConsumerBaseV2 {
+contract MonsterCollectibleOG is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burnable, Ownable, VRFConsumerBaseV2 {
     using Counters for Counters.Counter;
     
     Counters.Counter private _tokenIdCounter;

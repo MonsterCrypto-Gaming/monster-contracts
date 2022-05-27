@@ -22,6 +22,8 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
     Counters.Counter private _tokenIdCounter;
     VRFCoordinatorV2Interface COORDINATOR;
 
+
+
     // Your subscription ID.
     uint64 private s_subscriptionId;
 
@@ -39,7 +41,7 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
     // this limit based on the network that you select, the size of the request,
     // and the processing of the callback request in the fulfillRandomWords()
     // function.
-    uint32 private s_callbackGasLimit = 200000;
+    uint32 private s_callbackGasLimit = 500000;
 
     // The default is 3, but you can set this higher.
     uint16 private s_requestConfirmations = 3;
@@ -64,23 +66,26 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         mapping(address => uint) ownerToPackId;
         mapping(address => uint) ownerToPackQuantity;
         mapping(address => uint) ownerToMonsterType;
+        mapping(address => uint) ownerToMonsterId;
+        mapping(address => uint[]) randomNumbers;
     }
     MonsterReciept public monster;
-    mapping(uint => mapping(uint => uint)) mintPacksCost;
-    mapping(uint => uint) mintPackQuantity;
+    mapping(address => bool) public mintRights;
+    mapping(uint => mapping(uint => uint)) private mintPacksCost;
+    mapping(uint => uint) private mintPackQuantity;
+    mapping(uint => uint) public tokenIdToMonster;
 
-    uint256[] public ids; //uint array of ids
     string public baseMetadataURI; //metadata URI
-    uint public testChainlink;
 
     ERC20 LINK_token = ERC20(0x01BE23585060835E02B77ef475b0Cc51aA1e0709); // rinekby
     mapping(uint256 => address) public sender_request_ids;
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
     event ReceiveRandomNumber(uint256[] numReceived);
-    event NewlySplitNumbers(uint256[] numToSplit);
     event SplitBy_Updated(uint256 newSplitBy);
-    event MonsterGenerated(string monsterId);
+    event MonsterGenerated(uint monsterId);
+    event RandomNumberArray(uint[]);
+    event openedPack(address owner, bool opened);
 
     error setSplitBy__NumberInvalid();
 
@@ -88,7 +93,7 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         uint64 _subscriptionId,
         address _vrfCoordinator,
         bytes32 _keyHash
-    ) VRFConsumerBaseV2(_vrfCoordinator) ERC721("MonsterFactory", "MF") {
+    ) VRFConsumerBaseV2(_vrfCoordinator) ERC721("MMO", "MFO") {
         COORDINATOR = VRFCoordinatorV2Interface(_vrfCoordinator);
         s_owner = msg.sender;
         s_subscriptionId = _subscriptionId;
@@ -109,7 +114,11 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
     }
 
     function _baseURI() internal pure override returns (string memory) {
-        return "https://bafybeihszeu6cy5zdydso4mzomkouyfkq3bxe77b7cv7cpya7z75i2rpda.ipfs.nftstorage.link/";
+        return "https://bafybeifglhkoktbn7r7rvigkgaabh4wvu2rilavd74snwu7rzmza4yukce.ipfs.nftstorage.link/";
+    }
+    
+    function contractURI() public view returns (string memory) {
+        return "https://metadata-url.com/my-metadata";
     }
 
     function between(uint x, uint min, uint max) private pure returns (bool) {
@@ -134,79 +143,102 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         monster_reciept.owner = msg.sender;
         monster_reciept.ownerToPackId[msg.sender] = _mintPack;
         monster_reciept.ownerToPackQuantity[msg.sender] = mintPackQuantity[_mintPack];
-        sender_request_ids[requestRandomWords()] = address(msg.sender);
+        sender_request_ids[requestRandomWords()] = msg.sender;
     }
 
-    function getMonsterLevel(uint _number) public pure returns (uint number) {
-        uint monsterNum;
+    function getMonsterRarity(uint256 _number) private pure returns (uint256){
+        uint256 monsterRarity;
         require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
         if (_number <= 59) {
-            monsterNum = 1;
+            monsterRarity = 1;
         } else if (_number > 59 && _number <= 84) {
-            monsterNum =  2;
+            monsterRarity = 2;
         } else {
-            monsterNum = 3;
+            monsterRarity = 3;
         }
-        return monsterNum;
+        return monsterRarity;
     }
 
-    function getCommonType(uint _number) public pure returns (uint number) {
-        uint monsterNum;
-        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+    function getCommonMonster(uint256 _number) private pure returns (uint256) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
         if (between(_number, 1, 17)) {
-            monsterNum = 1;
+            monsterId = 101;
         } else if (between(_number, 18, 34)) {
-            monsterNum = 2;
+            monsterId = 104;
         } else if (between(_number, 35, 51)) {
-            monsterNum = 3;
+            monsterId = 107;
         } else if (between(_number, 52, 68)) {
-            monsterNum = 4;
+            monsterId = 113;
         } else if (between(_number, 69, 84)) {
-            monsterNum = 4;
+            monsterId = 114;
         } else {
-            monsterNum = 6;
+            monsterId = 115;
         }
-        return monsterNum;
+        return monsterId;
     }
 
-    function getMonsterId(uint _level, uint _number) public pure returns (uint) {
-        uint id;
-        if (_level == 1) {
-            id = getCommonType(_number);
-        } else if (_level == 2) {
-            id = getRareType(_number);
-        } else {
-            id = getSuperRareType(_number);
-        }
-        return id;
-    }
-
-
-    function getRareType(uint _number) public pure returns (uint number) {
-        uint monsterNum;
-        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+    function getRareMonster(uint256 _number) private pure returns (uint256) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
         if (between(_number, 1, 50)) {
-            monsterNum = 7;
+            monsterId = 110;
         } else {
-            monsterNum = 8;
+            monsterId = 111;
         }
-        return monsterNum;
+        return monsterId;
     }
 
-    function getSuperRareType(uint _number) public pure returns (uint number) {
-        uint monsterNum;
-        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
-        monsterNum = 12;
-        return monsterNum;
+    function getUltraRareMonster(uint256 _number) private pure returns (uint256) {
+        uint256 monsterId;
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
+        monsterId = 112;
+        return monsterId;
     }
 
-    function safeMint(address to, string memory _uri) private {
+    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private pure returns (uint256) {
+        uint256 monId;
+        require((_rarity <= 3 && _rarity >= 1), "incorrect value sent, Rarity Level should be 1, 2 or 3");
+        if (_rarity == 1) {
+            monId = getCommonMonster(_specificMonsterInput);
+        } else if (_rarity == 2) {
+            monId = getRareMonster(_specificMonsterInput);
+        } else {
+            monId = getUltraRareMonster(_specificMonsterInput);
+        }
+        return monId;
+    }
+
+        
+    function openPack() public payable {
+        require(mintRights[msg.sender] == true, "buy a starter pack first");
+        uint mLevel = getMonsterRarity(monster.randomNumbers[msg.sender][0]);
+        uint mId = filterMonstersByRarity(mLevel, monster.randomNumbers[msg.sender][1]);
+        safeMint(msg.sender, mId);
+        emit openedPack(msg.sender, true);
+        mintRights[msg.sender] = false;
+    }
+
+    function safeMint(address to, uint mId) private {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
-        _setTokenURI(tokenId, string(abi.encodePacked(_baseURI(), _uri)));
-        emit MonsterGenerated(_uri);
+        string memory str = Strings.toString(mId);
+        _setTokenURI(tokenId, string(abi.encodePacked(_baseURI(), str, ".json")));
+        tokenIdToMonster[tokenId] = mId;
+        emit MonsterGenerated(mId);
     }
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override(ERC721, ERC721URIStorage)
+        returns (string memory)
+    {
+        string memory str = Strings.toString(tokenIdToMonster[tokenId]);
+        return string(abi.encodePacked(_baseURI(), str, ".json"));
+    }
+
 
     // The following functions are overrides required by Solidity.
 
@@ -221,15 +253,6 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
         super._burn(tokenId);
     }
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        return super.tokenURI(tokenId);
-    }
-
     function supportsInterface(bytes4 interfaceId)
         public
         view
@@ -240,19 +263,18 @@ contract VRFv2Consumer is ERC721, ERC721Enumerable, ERC721URIStorage, ERC721Burn
     }
 
     function fulfillRandomWords(
-        uint256, /* requestId */
+        uint256 requestId, /* requestId */
         uint256[] memory _randomness
     ) internal override {
-        uint mLevel;
-        uint mId;
+        MonsterReciept storage monster_reciept = monster;
         s_randomNum = _randomness;
         emit ReceiveRandomNumber(s_randomNum);
         s_randomNumSplit = expand(s_randomNum[0], s_splitBy); //4 diff numbas
-        mLevel = getMonsterLevel(s_randomNumSplit[0]);
-        mId = getMonsterId(mLevel, s_randomNumSplit[0]);
-        safeMint(msg.sender, Strings.toString(mId));
+        emit RandomNumberArray(s_randomNumSplit);
+        monster_reciept.randomNumbers[sender_request_ids[requestId]] = s_randomNumSplit;
+        mintRights[sender_request_ids[requestId]] = true;
     }
-
+    
     function expand(uint256 num, uint256 n)
         internal
         pure

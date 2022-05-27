@@ -32,7 +32,6 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
     event NftMinted(address owner, uint256 uniqueNftTokenId, uint256 monsterId);
     event MonsterToGenerate(uint256 _monsterUniqueId);
     
-    
     error MonsterId__NumberInvalid();
 
     // =====================================================================================
@@ -42,11 +41,7 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
         bytes32 _keyHash
     )
     VRFv2Consumer(_subscriptionId, _vrfCoordinator, _keyHash)
-    ERC721("MonsterFactory", "MF") {
-        // s_owner = msg.sender;
-        // i_vrfCoordinator = VRFv2Consumer(_vrfCoordinator);
-    }
-
+    ERC721("Monstermons", "MON") {}
 
     // Main function 1 - Gets Random Numbers from CL to be used for Monster selection and generation
     function requestBoosterPack() public {
@@ -55,23 +50,8 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
 
     }
     
-    // // Automatically gets kicked off on internal call back to this contract from CL VRF
-    // function fulfillRandomWords(
-    //     uint256 requestId,
-    //     uint256[] memory _randomness
-    // ) internal override {
-    //     s_randomNum = _randomness;
-    //     emit ReceivedRandonmessNum(s_randomNum);
-    //     s_monsterGeneratorNums = expand(s_randomNum[0], s_quantityOfNumsToGenerate);
-    //     emit MonsterGeneratorNums(s_monsterGeneratorNums); // 20, 15, 33, 98
-    //     // mintBoosterPack(s_randomNumSplit);
-    // }
-
-
-
     // Main function 2 - Selects monsters to be generated and mints monsters
-    // function mintBoosterPack(uint256[] memory _randomNums) internal  {
-    function mintBoosterPack() public  {
+    function mintBoosterPack() public {
         (
             uint256 monster1RarityInput,
             uint256 monster1SpecificInput,
@@ -105,7 +85,7 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
     }
     
     function _baseURI() internal pure override returns (string memory) {
-        return "https://bafybeihszeu6cy5zdydso4mzomkouyfkq3bxe77b7cv7cpya7z75i2rpda.ipfs.nftstorage.link/";
+        return "https://bafybeifglhkoktbn7r7rvigkgaabh4wvu2rilavd74snwu7rzmza4yukce.ipfs.nftstorage.link/";
     }
 
     

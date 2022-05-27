@@ -8,31 +8,46 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./VRFv2Consumer.sol";
 
-/// @title MonsterShop ERC-1155 Contract
-/// @author Freddie71010
+/// @title Monster Collectible
+/// @author Freddie71010, 0xCrispy
 /// @notice This contract provides the ability to mint a pack of "Monster" cards - w/ Chainlink VRF and decentralized storage
 
-contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consumer {
+contract MonsterCollectible is ERC721URIStorage, Ownable, Pausable, VRFv2Consumer {
     using Counters for Counters.Counter;
-    // address s_owner;
 
     // NFT
     uint8 constant public STARTER_PACK = 2;
     uint256 constant public STARTER_PACK_FEE = 0.015 ether;
-    // string[15] internal s_monsterTokenURIs;
     Counters.Counter public tokenIdCounter;
     
+    //GAME VARIABLES
+    // struct MonsterReceipt {
+    //     address owner;
+    //     mapping(address => uint) ownerToPackId;
+    //     mapping(address => uint) ownerToPackQuantity;
+    //     mapping(address => uint) ownerToMonsterType;
+    //     mapping(address => uint) ownerToMonsterId;
+    //     mapping(address => uint[]) randomNumbers;
+    // }
+    // MonsterReceipt public monster;
+    // mapping(address => bool) public mintRights;
+    // mapping(uint => mapping(uint => uint)) private mintPacksCost;
+    // mapping(uint => uint) private mintPackQuantity;
+    mapping(address => uint) public s_addressToUnmintedPacks; // Address -to- Number of unminted pack in wallet
+    mapping(uint => uint) public s_tokenIdToMonster; // Unique NFT Token ID -to- Monster ID
+    
     // VRF Helpers
-    // VRFv2Consumer immutable i_vrfCoordinator;
     mapping(uint256 => address) public s_requestIdToSender;
-    // string public baseMetadataURI; //metadata URI
 
     // Events
     event NftRequested(uint256 indexed requestId, address requester);
     event NftMinted(address owner, uint256 uniqueNftTokenId, uint256 monsterId);
     event MonsterToGenerate(uint256 _monsterUniqueId);
     
+    // Errors
     error MonsterId__NumberInvalid();
+    error BoosterPack__AvailableUnmintedPackInWallet();
+    error BoosterPack__NoUnmintedPackInWallet();
 
     // =====================================================================================
     constructor (
@@ -44,13 +59,20 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
     ERC721("Monstermons", "MON") {}
 
     // Main function 1 - Gets Random Numbers from CL to be used for Monster selection and generation
-    function requestBoosterPack() public {
+    function requestBoosterPack() external {
+        if (s_addressToUnmintedPacks[msg.sender] == 1) {
+            revert BoosterPack__AvailableUnmintedPackInWallet();
+        }
         requestRandomWords(); 
         s_requestIdToSender[s_requestId] = msg.sender;
+        s_addressToUnmintedPacks[msg.sender] = 1;
     }
     
     // Main function 2 - Selects monsters to be generated and mints monsters
-    function mintBoosterPack() public {
+    function mintBoosterPack() external {
+        if (s_addressToUnmintedPacks[msg.sender] == 0) {
+            revert BoosterPack__NoUnmintedPackInWallet();
+        }
         (
             uint256 monster1RarityInput,
             uint256 monster1SpecificInput,
@@ -62,9 +84,11 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
         uint256 monster2Id = generateMonster(monster2RarityInput, monster2SpecificInput);
         
         address monsterOwner = s_requestIdToSender[s_requestId];
-        // now it's time to mint the monsters
+        // Mint monsters
         mintMonster(monster1Id, monsterOwner);
         mintMonster(monster2Id, monsterOwner);
+        
+        s_addressToUnmintedPacks[msg.sender] = 0;
     }
     
     function mintMonster(uint256 _monster, address _monsterOwner) private {
@@ -73,7 +97,7 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
         _safeMint(_monsterOwner, newTokenId);
         string memory strMonsterId = Strings.toString(_monster);
         _setTokenURI(newTokenId, string(abi.encodePacked(_baseURI(), strMonsterId, ".json")));
-        
+        s_tokenIdToMonster[newTokenId] = _monster;
         emit NftMinted(_monsterOwner, newTokenId, _monster);
     }
     
@@ -178,13 +202,8 @@ contract MonsterCollectible2 is ERC721URIStorage, Ownable, Pausable, VRFv2Consum
         return monsterId;
     }
 
-    function getTokenURI(uint256 tokenId)
-        public
-        view
-        override(ERC721, ERC721URIStorage)
-        returns (string memory)
-    {
-        string memory str = Strings.toString(tokenIdToMonster[tokenId]);
+    function getTokenURI(uint256 tokenId) public view returns (string memory) {
+        string memory str = Strings.toString(s_tokenIdToMonster[tokenId]);
         return string(abi.encodePacked(_baseURI(), str, ".json"));
     }
 

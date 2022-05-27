@@ -28,30 +28,30 @@ def deploy_monster_collectible():
     input("Add address as a 'Consumer' to VRF Chainlink Manager to continue. Push 'Enter' when ready:")
     return monster_collectible
 
-def request_booster_pack():
+def buy_booster_pack():
     account = get_account(env="MM1")
     monster_collectible = MonsterCollectible[-1]
     print_line(f"MonsterCollectible contract address: {monster_collectible.address}")
-    starting_tx = monster_collectible.requestBoosterPack({"from": account})
+    starting_tx = monster_collectible.buyBoosterPack({"from": account, "amount": 10000000000000000})    # 0.01 eth
     starting_tx.wait(1)
-    print_line("requestBoosterPack has started!")
+    print_line("buyBoosterPack has started!")
     event = listen_for_event(
         monster_collectible, "MonsterGeneratorNums", timeout=5*60, poll_interval=20
     )
     print(event)
 
-def mint_booster_pack():
+def open_booster_pack():
     account = get_account(env="MM1")
     monster_collectible = MonsterCollectible[-1]
     print_line(f"MonsterCollectible contract address: {monster_collectible.address}")
-    starting_tx = monster_collectible.mintBoosterPack({"from": account})
+    starting_tx = monster_collectible.openBoosterPack({"from": account})
     starting_tx.wait(1)
-    print_line("MintBoosterPack has started!")
+    print_line("openBoosterPack has started!")
     # TODO: Fix this 'NftMinted' event as it's not working!
-    event = listen_for_event(
-        monster_collectible, "NftMinted", timeout=1*60, poll_interval=10
-    )
-    print(event)
+    # event = listen_for_event(
+    #     monster_collectible, "NftMinted", timeout=1*60, poll_interval=10
+    # )
+    # print(event)
     
 
 def deploy_vrfv2consumer():
@@ -81,12 +81,12 @@ def main():
     '''
     Use below command to run specific function from deploy script:
     `brownie run scripts/deploy.py <FUNC_NAME>`
-    EX: brownie run scripts/deploy.py request_booster_pack --network rinkeby
+    EX: brownie run scripts/deploy.py buy_booster_pack --network rinkeby
     '''
     # deploy_monster_token()
     # deploy_vrfv2consumer()
     # request_random_nums()
     deploy_monster_collectible()
-    request_booster_pack()
-    mint_booster_pack()
+    buy_booster_pack()
+    open_booster_pack()
     print("done")

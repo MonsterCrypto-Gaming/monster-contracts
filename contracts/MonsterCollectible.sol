@@ -126,7 +126,7 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
     // withdrawing contract balances
     function withdraw(address _to) public onlyOwner {
         require(address(this).balance > 0, "Balance of contract is 0");
-        _to.transfer(address(this).balance);
+        payable(_to).transfer(address(this).balance);
     }
 
     

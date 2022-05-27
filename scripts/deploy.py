@@ -32,7 +32,7 @@ def buy_booster_pack():
     account = get_account(env="MM1")
     monster_collectible = MonsterCollectible[-1]
     print_line(f"MonsterCollectible contract address: {monster_collectible.address}")
-    starting_tx = monster_collectible.buyBoosterPack({"from": account})
+    starting_tx = monster_collectible.buyBoosterPack({"from": account, "amount": 10000000000000000})    # 0.01 eth
     starting_tx.wait(1)
     print_line("buyBoosterPack has started!")
     event = listen_for_event(

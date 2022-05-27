@@ -22,8 +22,6 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
     Counters.Counter private _tokenIdCounter;
     VRFCoordinatorV2Interface COORDINATOR;
 
-
-
     // Your subscription ID.
     uint64 private s_subscriptionId;
 
@@ -55,27 +53,23 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
     uint256 public s_requestId;
     uint256 public s_splitBy = 4;
     address s_owner;
-    address public deployer;
 
     //IN DEVELOPMENT//
 
     //GAME VARIABLES
-    uint8 private MAX_TYPE = 15;
-    struct MonsterReciept {
-    address owner;
+    struct MonsterReceipt {
+        address owner;
         mapping(address => uint) ownerToPackId;
         mapping(address => uint) ownerToPackQuantity;
         mapping(address => uint) ownerToMonsterType;
         mapping(address => uint) ownerToMonsterId;
         mapping(address => uint[]) randomNumbers;
     }
-    MonsterReciept public monster;
+    MonsterReceipt public monster;
     mapping(address => bool) public mintRights;
     mapping(uint => mapping(uint => uint)) private mintPacksCost;
     mapping(uint => uint) private mintPackQuantity;
     mapping(uint => uint) public tokenIdToMonster;
-
-    string public baseMetadataURI; //metadata URI
 
     ERC20 LINK_token = ERC20(0x01BE23585060835E02B77ef475b0Cc51aA1e0709); // rinekby
     mapping(uint256 => address) public sender_request_ids;
@@ -121,7 +115,7 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
         return "https://metadata-url.com/my-metadata";
     }
 
-   
+     // Booster Pack Mapping
      function createMapping() public {
         mintPacksCost[1][3] = .01 ether;
         mintPacksCost[2][6] = .02 ether;
@@ -136,7 +130,7 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
         } else {
             require(msg.value == mintPacksCost[_mintPack][6], "incorrect amount sent for packId");
         }
-        MonsterReciept storage monster_reciept = monster;
+        MonsterReceipt storage monster_reciept = monster;
         monster_reciept.owner = msg.sender;
         monster_reciept.ownerToPackId[msg.sender] = _mintPack;
         monster_reciept.ownerToPackQuantity[msg.sender] = mintPackQuantity[_mintPack];
@@ -146,16 +140,17 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
 
 
     // ====================================================================================================
-    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private returns (uint256) {
-        uint256 monsterId;
+    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private pure returns (uint256) {
+        uint256 monId;
         require((_rarity <= 3 && _rarity >= 1), "incorrect value sent, Rarity Level should be 1, 2 or 3");
         if (_rarity == 1) {
-            monsterId = getCommonMonster(_specificMonsterInput);
+            monId = getCommonMonster(_specificMonsterInput);
         } else if (_rarity == 2) {
-            monsterId = getRareMonster(_specificMonsterInput);
+            monId = getRareMonster(_specificMonsterInput);
         } else {
-            monsterId = getUltraRareMonster(_specificMonsterInput);
+            monId = getUltraRareMonster(_specificMonsterInput);
         }
+        return monId;
     }
 
     function between(uint256 x, uint256 min, uint256 max) private pure returns (bool) {
@@ -212,20 +207,8 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
         return monsterId;
     }
 
-    function filterMonstersByRarity(uint256 _rarity, uint256 _specificMonsterInput) private pure returns (uint256) {
-        uint256 monId;
-        require((_rarity <= 3 && _rarity >= 1), "incorrect value sent, Rarity Level should be 1, 2 or 3");
-        if (_rarity == 1) {
-            monId = getCommonMonster(_specificMonsterInput);
-        } else if (_rarity == 2) {
-            monId = getRareMonster(_specificMonsterInput);
-        } else {
-            monId = getUltraRareMonster(_specificMonsterInput);
-        }
-        return monId;
-    }
+    // ====================================================================================================
 
-        
     function openPack() public payable {
         require(mintRights[msg.sender] == true, "buy a starter pack first");
         uint mLevel = getMonsterRarity(monster.randomNumbers[msg.sender][0]);
@@ -245,7 +228,7 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
         emit MonsterGenerated(mId);
     }
 
-    function tokenURI(uint256 tokenId)
+    function gettokenURI(uint256 tokenId)
         public
         view
         override(ERC721, ERC721URIStorage)
@@ -284,7 +267,7 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
         uint256 requestId, /* requestId */
         uint256[] memory _randomness
     ) internal override {
-        MonsterReciept storage monster_reciept = monster;
+        MonsterReceipt storage monster_reciept = monster;
         s_randomNum = _randomness;
         emit ReceiveRandomNumber(s_randomNum);
         s_randomNumSplit = expand(s_randomNum[0], s_splitBy); //4 diff numbas

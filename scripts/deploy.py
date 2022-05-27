@@ -1,4 +1,4 @@
-from brownie import MonsterCollectible2, VRFv2Consumer, MonsterToken, config, network
+from brownie import MonsterCollectible, VRFv2Consumer, MonsterToken, config, network
 from .utils import get_account, print_line, wait_for_randomness, listen_for_event
 import time, sys
 
@@ -14,7 +14,7 @@ def deploy_monster_token():
 
 def deploy_monster_collectible():
     account = get_account(env="MM1")
-    monster_collectible = MonsterCollectible2.deploy(
+    monster_collectible = MonsterCollectible.deploy(
         config["networks"][network.show_active()]["subscription_id"],
         config["networks"][network.show_active()]["vrfcoordinator"],
         config["networks"][network.show_active()]["keyhash"],
@@ -22,13 +22,15 @@ def deploy_monster_collectible():
         publish_source=config["networks"][network.show_active()].get("verify", True),
     )
     print_line("Deployed Monster Collectible!")
-    print_line("MAKE SURE YOU ADD NEWLY DEPLOYED CONTRACT TO CHAINLINK SUBSCRIPTION - https://vrf.chain.link/rinkeby/4552", char="*")
-    input("Add address as a 'Consumer' to VRF Chainlink Manager to continue. Push 'Enter' when ready.")
+    print("")
+    print_line("WARNING", char="*")
+    print_line("MAKE SURE YOU ADD NEWLY DEPLOYED CONTRACT TO CHAINLINK SUBSCRIPTION - https://vrf.chain.link/", char="*")
+    input("Add address as a 'Consumer' to VRF Chainlink Manager to continue. Push 'Enter' when ready:")
     return monster_collectible
 
 def request_booster_pack():
     account = get_account(env="MM1")
-    monster_collectible = MonsterCollectible2[-1]
+    monster_collectible = MonsterCollectible[-1]
     print_line(f"MonsterCollectible contract address: {monster_collectible.address}")
     starting_tx = monster_collectible.requestBoosterPack({"from": account})
     starting_tx.wait(1)
@@ -40,11 +42,12 @@ def request_booster_pack():
 
 def mint_booster_pack():
     account = get_account(env="MM1")
-    monster_collectible = MonsterCollectible2[-1]
+    monster_collectible = MonsterCollectible[-1]
     print_line(f"MonsterCollectible contract address: {monster_collectible.address}")
     starting_tx = monster_collectible.mintBoosterPack({"from": account})
     starting_tx.wait(1)
     print_line("MintBoosterPack has started!")
+    # TODO: Fix this 'NftMinted' event as it's not working!
     event = listen_for_event(
         monster_collectible, "NftMinted", timeout=1*60, poll_interval=10
     )

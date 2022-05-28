@@ -20,8 +20,8 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
     // NFT
     uint8 constant public STARTER_PACK = 2;
     uint256 constant public STARTER_PACK_FEE = 0.01 ether;
-    Counters.Counter private tokenIdCounter;
-    mapping(uint256 => string) public monsterIdToMonsterName;
+    Counters.Counter internal tokenIdCounter;
+    mapping(uint256 => string) public s_monsterIdToMonsterName;
     
     //GAME VARIABLES
     // struct MonsterReceipt {
@@ -57,7 +57,7 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
     )
     VRFv2Consumer(_subscriptionId, _vrfCoordinator, _keyHash)
     ERC721("Monster Pad", "MOP") {
-        setMonsterMapper();
+        setMonsterMapperMonsterCollectible();
     }
 
     // Main function 1 - Gets Random Numbers from CL to be used for Monster selection and generation
@@ -91,14 +91,14 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
         s_addressToUnmintedPacks[msg.sender] = 0;
     }
     
-    function mintMonster(uint256 _monster, address _monsterOwner) private {
+    function mintMonster(uint256 _monster, address _monsterOwner) internal {
         uint256 newTokenId = tokenIdCounter.current();
         tokenIdCounter.increment();
         _safeMint(_monsterOwner, newTokenId);
         string memory strMonsterId = Strings.toString(_monster);
         _setTokenURI(newTokenId, string(abi.encodePacked(strMonsterId, ".json")));
         s_tokenIdToMonster[newTokenId] = _monster;
-        emit NftMinted(_monsterOwner, newTokenId, _monster, monsterIdToMonsterName[_monster]);
+        emit NftMinted(_monsterOwner, newTokenId, _monster, s_monsterIdToMonsterName[_monster]);
     }
     
     function _splitInto4Numbers(uint256[] memory _nums) private pure returns (uint256, uint256, uint256, uint256) {
@@ -130,22 +130,22 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
     }
 
     
-    function setMonsterMapper() private {
-        monsterIdToMonsterName[101]="Greenip";
-        monsterIdToMonsterName[102]="Bloonip";
-        monsterIdToMonsterName[103]="Trapnip";
-        monsterIdToMonsterName[104]="Lavanoob";
-        monsterIdToMonsterName[105]="Lapro";
-        monsterIdToMonsterName[106]="Champlava";
-        monsterIdToMonsterName[107]="Rabikid";
-        monsterIdToMonsterName[108]="Ratrapa";
-        monsterIdToMonsterName[109]="Rabuddaa";
-        monsterIdToMonsterName[110]="Borodillo";
-        monsterIdToMonsterName[111]="Electrazaar";
-        monsterIdToMonsterName[112]="Mythikos";
-        monsterIdToMonsterName[113]="Slitex";
-        monsterIdToMonsterName[114]="Flyfury";
-        monsterIdToMonsterName[115]="Terapartor";
+    function setMonsterMapperMonsterCollectible() private {
+        s_monsterIdToMonsterName[101]="Greenip";
+        s_monsterIdToMonsterName[102]="Bloonip";
+        s_monsterIdToMonsterName[103]="Trapnip";
+        s_monsterIdToMonsterName[104]="Lavanoob";
+        s_monsterIdToMonsterName[105]="Lapro";
+        s_monsterIdToMonsterName[106]="Champlava";
+        s_monsterIdToMonsterName[107]="Rabikid";
+        s_monsterIdToMonsterName[108]="Ratrapa";
+        s_monsterIdToMonsterName[109]="Rabuddaa";
+        s_monsterIdToMonsterName[110]="Borodillo";
+        s_monsterIdToMonsterName[111]="Electrazaar";
+        s_monsterIdToMonsterName[112]="Mythikos";
+        s_monsterIdToMonsterName[113]="Slitex";
+        s_monsterIdToMonsterName[114]="Flyfury";
+        s_monsterIdToMonsterName[115]="Terapartor";
     }
     // Helper functions for Monster generation calculation
     // ================================================================================================
@@ -169,7 +169,7 @@ contract MonsterCollectible is ERC721, ERC721Enumerable, ERC721URIStorage, ERC72
 
     function getMonsterRarity(uint256 _number) private pure returns (uint256){
         uint256 monsterRarity;
-        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 0-100 range");
+        require((_number <= 100 && _number >= 1), "incorrect value sent, digit should be in 1-100 range");
         if (_number <= 59) {
             monsterRarity = 1;
         } else if (_number > 59 && _number <= 84) {

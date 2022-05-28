@@ -1,4 +1,4 @@
-from brownie import MonsterCollectible, VRFv2Consumer, MonsterToken, config, network
+from brownie import EvolutionPool, MonsterCollectible, VRFv2Consumer, MonsterToken, config, network
 from .utils import get_account, print_line, wait_for_randomness, listen_for_event
 import time, sys
 
@@ -52,8 +52,24 @@ def open_booster_pack():
     #     monster_collectible, "NftMinted", timeout=1*60, poll_interval=10
     # )
     # print(event)
-    
 
+def deploy_evolution_pool():
+    account = get_account(env="MM1")
+    evolution_pool = EvolutionPool.deploy(
+        config["networks"][network.show_active()]["subscription_id"],
+        config["networks"][network.show_active()]["vrfcoordinator"],
+        config["networks"][network.show_active()]["keyhash"],
+        {"from": account},
+        publish_source=config["networks"][network.show_active()].get("verify", True),
+    )
+    
+    starting_tx = evolution_pool.mint_commons({"from": account})
+    starting_tx.wait(1)
+    evolution_pool.mint_rares({"from": account})
+    
+    print_line("mint_commons and mint_rares have started!")
+    print_line("Deployed EvolutionPool!")
+    
 def deploy_vrfv2consumer():
     account = get_account(env="MM1")
     # Assumes the subscription is funded sufficiently.
@@ -86,7 +102,7 @@ def main():
     # deploy_monster_token()
     # deploy_vrfv2consumer()
     # request_random_nums()
-    deploy_monster_collectible()
-    buy_booster_pack()
-    open_booster_pack()
+    # deploy_monster_collectible()
+    # buy_booster_pack()
+    # open_booster_pack()
     print("done")

@@ -14,18 +14,18 @@ error NotOwner();
 error NotApprovedForMarketplace();
 error PriceMustBeAboveZero();
 
-/// @title NFT Marketplace
-/// @author 0xCrispy
-/// @notice Marketplace for trading NFTs
-
 contract NftMarketplace is ReentrancyGuard {
 
-
-    address private constant nftContractAddr =
-        0xd16B472C1b3AB8bc40C1321D7b33dB857e823f01;
+    address private nftContractAddr;
+    address public owner;
     IERC721Enumerable private nftInstance;
     int[] public onMarketArray;
     mapping(uint => int) public tokenIdToListIndex;
+
+    constructor(address _address, address _owner) {
+        nftContractAddr = _address;
+        owner = _owner;
+    }
 
     struct Listing {
         uint256 price;
@@ -163,7 +163,8 @@ contract NftMarketplace is ReentrancyGuard {
         if (msg.value < listedItem.price) {
             revert PriceNotMet(nftAddress, tokenId, listedItem.price);
         }
-        s_proceeds[listedItem.seller] += msg.value;
+        (bool success, ) = payable(listedItem.seller).call{value: msg.value}("");
+        require(success, "Transfer failed");
         delete (s_listings[nftAddress][tokenId]);
         IERC721(nftAddress).safeTransferFrom(listedItem.seller, msg.sender, tokenId);
         IdToListingStatus[tokenId] = false;
@@ -192,19 +193,6 @@ contract NftMarketplace is ReentrancyGuard {
         emit ItemListed(msg.sender, nftAddress, tokenId, newPrice);
     }
 
-    /*
-     * @notice Method for withdrawing proceeds from sales
-     */
-    function withdrawProceeds() external {
-        uint256 proceeds = s_proceeds[msg.sender];
-        if (proceeds <= 0) {
-            revert NoProceeds();
-        }
-        s_proceeds[msg.sender] = 0;
-        (bool success, ) = payable(msg.sender).call{value: proceeds}("");
-        require(success, "Transfer failed");
-    }
-
     /////////////////////
     // Getter Functions //
     /////////////////////
@@ -217,10 +205,6 @@ contract NftMarketplace is ReentrancyGuard {
         return s_listings[nftAddress][tokenId];
     }
 
-    function getProceeds(address seller) external view returns (uint256) {
-        return s_proceeds[seller];
-    }
-
     function remove(uint index) public {
         tokenIdToListIndex[uint(onMarketArray[onMarketArray.length - 1])] = int(index);
         onMarketArray[index] = onMarketArray[onMarketArray.length - 1];
@@ -229,5 +213,10 @@ contract NftMarketplace is ReentrancyGuard {
 
     function getAllNFTs() public view returns (int[] memory) {
         return onMarketArray;
+    }
+
+    function setNftAddress(address _address) public  {
+        require(msg.sender == owner, "only owner bro");
+        nftContractAddr = _address;
     }
 }

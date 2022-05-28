@@ -13,6 +13,11 @@ A blockchain based game built during the Chainlink 2022 Hackathon
 
 - **Frontend Code**: https://github.com/MonsterCrypto-Gaming/reactNativeFrontEnd
 
+## Smart Contracts
+
+- **EvolutionPool** - https://rinkeby.etherscan.io/address/0x540872649BdC0ad93Aca2195FFE60909f7394d0f#code
+- **MarketPlace** - https://rinkeby.etherscan.io/address/0x69b239F92208E27491a38cF46A7e45C3D67D5b96#code
+
 ## Links:
 - **Application Demo**: https://drive.google.com/file/d/1ur93VeaJE50cUkxA3cfJxL0Y19FPnbs4/view?usp=sharing
 - **Github Repo Link**: https://github.com/MonsterCrypto-Gaming/monster-contracts

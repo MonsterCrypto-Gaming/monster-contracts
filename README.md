@@ -15,7 +15,7 @@ A blockchain based game built during the Chainlink 2022 Hackathon
 
 ## Links:
 - **Android Apk for using the app**: https://drive.google.com/drive/folders/1CznQTSxI_DU60UNiqxPhO9LlVLaAYsVT?usp=sharing
-- **Application Demo**: https://www.youtube.com/watch?v=wf0OAuIMm_k&t=33s
+- **Application Demo**: https://youtu.be/wf0OAuIMm_k
 - **Github Repo Link**: https://github.com/MonsterCrypto-Gaming/monster-contracts
 - **Pitch Deck Link**: https://docs.google.com/presentation/d/1HgkzUMuXRBbsn-Pn-gE-5J5T9JkQa6rb6EjW_K6h7lg/edit#slide=id.g12ee8e1b5b8_0_26Pitch 
 - **Presentation Video**: https://drive.google.com/file/d/1f11vTC0hEGE-xRnwm97PqksdHuwZm4eG/view?usp=sharing

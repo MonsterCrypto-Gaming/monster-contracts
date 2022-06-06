@@ -13,7 +13,10 @@ A blockchain based game built during the Chainlink 2022 Hackathon
 
 - **Frontend Code**: https://github.com/MonsterCrypto-Gaming/reactNativeFrontEnd
 
-## Links:
+## Chainlink Hackathon 2022 Submission:
+- https://devpost.com/software/monster-fs1tb2
+
+### Additional Links:
 - **Android Apk for using the app**: https://drive.google.com/drive/folders/1CznQTSxI_DU60UNiqxPhO9LlVLaAYsVT?usp=sharing
 - **Application Demo**: https://youtu.be/wf0OAuIMm_k
 - **Github Repo Link**: https://github.com/MonsterCrypto-Gaming/monster-contracts
